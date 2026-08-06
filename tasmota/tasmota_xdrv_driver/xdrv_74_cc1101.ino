@@ -6,7 +6,6 @@
 #include <RCSwitch.h>
 
 #define CC1101_GDO0_DEFAULT     4
-#define CC1101_GDO2_DEFAULT     22
 #define CC1101_CS_DEFAULT       5
 #define CC1101_SCK          18
 #define CC1101_MOSI         23
@@ -176,7 +175,6 @@ bool cc1101_init_hw(void) {
   int gdo2_pin = Pin(GPIO_CC1101_GDO2);
   if (cs_pin < 0) cs_pin = CC1101_CS_DEFAULT;
   if (gdo0_pin < 0) gdo0_pin = CC1101_GDO0_DEFAULT;
-  if (gdo2_pin < 0) gdo2_pin = CC1101_GDO2_DEFAULT;
   cc1101_cs_pin = cs_pin;
 
   if (cc1101_spi == nullptr) {
@@ -186,7 +184,11 @@ bool cc1101_init_hw(void) {
 
   pinMode(cs_pin, OUTPUT);
   pinMode(gdo0_pin, INPUT);
-  pinMode(gdo2_pin, INPUT);
+  if (gdo2_pin >= 0) {
+    pinMode(gdo2_pin, INPUT);
+  } else {
+    AddLog(LOG_LEVEL_INFO, PSTR("CC1: GDO2 not configured, TX may not work"));
+  }
 
   cc1101_deselect();
   delay(100);
@@ -222,8 +224,17 @@ void cc1101_send_rf(uint64_t value, unsigned int bits, unsigned int protocol,
                     unsigned int pulse_length, unsigned int repeat) {
   if (!cc1101_status.initialized) return;
 
+  int gdo0_pin = Pin(GPIO_CC1101_GDO0);
+  int gdo2_pin = Pin(GPIO_CC1101_GDO2);
+  if (gdo0_pin < 0) gdo0_pin = CC1101_GDO0_DEFAULT;
+
+  int tx_pin = (gdo2_pin >= 0) ? gdo2_pin : gdo0_pin;
+
   cc1101_set_idle();
   cc1101_rcswitch.disableReceive();
+
+  pinMode(tx_pin, OUTPUT);
+  cc1101_rcswitch.enableTransmit(tx_pin);
 
   cc1101_rcswitch.setProtocol(protocol);
   cc1101_rcswitch.setRepeatTransmit(repeat);
@@ -235,8 +246,8 @@ void cc1101_send_rf(uint64_t value, unsigned int bits, unsigned int protocol,
 
   delay(50);
 
-  int gdo0_pin = Pin(GPIO_CC1101_GDO0);
-  if (gdo0_pin < 0) gdo0_pin = CC1101_GDO0_DEFAULT;
+  cc1101_rcswitch.disableTransmit();
+  pinMode(gdo0_pin, INPUT);
   cc1101_rcswitch.enableReceive(gdo0_pin);
   cc1101_set_ask_ook();
 }
