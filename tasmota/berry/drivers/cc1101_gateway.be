@@ -134,7 +134,7 @@ class Cc1101Gateway
 
     self.events = []
     var lines = str(content).split("\n")
-    for line in lines
+    for line : lines
       line = line.trim()
       if line != ""
         var evt = json.load(line)
@@ -150,7 +150,7 @@ class Cc1101Gateway
     import json
 
     var lines = ""
-    for evt in self.events
+    for evt : self.events
       lines += json.dump(evt) + "\n"
     end
     path.write_file(self._FILE_EVENTS, lines)
@@ -161,8 +161,8 @@ class Cc1101Gateway
       "ts": tasmota.rtc()["local"],
       "type": evt_type
     }
-    for k, v in detail
-      evt[k] = v
+    for k : detail.keys()
+      evt[k] = detail[k]
     end
     self.events.push(evt)
 
@@ -196,10 +196,10 @@ class Cc1101Gateway
   end
 
   def update_remote(id, updates)
-    for remote in self.remotes
+    for remote : self.remotes
       if remote["id"] == id
-        for k, v in updates
-          remote[k] = v
+        for k : updates.keys()
+          remote[k] = updates[k]
         end
         self.save_remotes()
         return true
@@ -233,7 +233,7 @@ class Cc1101Gateway
   end
 
   def find_remote(id)
-    for remote in self.remotes
+    for remote : self.remotes
       if remote["id"] == id
         return remote
       end
@@ -263,10 +263,10 @@ class Cc1101Gateway
   end
 
   def update_door(id, updates)
-    for door in self.doors
+    for door : self.doors
       if door["id"] == id
-        for k, v in updates
-          door[k] = v
+        for k : updates.keys()
+          door[k] = updates[k]
         end
         self.save_doors()
         self.publish_door_state(door)
@@ -301,7 +301,7 @@ class Cc1101Gateway
   end
 
   def find_door(id)
-    for door in self.doors
+    for door : self.doors
       if door["id"] == id
         return door
       end
@@ -310,7 +310,7 @@ class Cc1101Gateway
   end
 
   def find_door_by_code(code)
-    for door in self.doors
+    for door : self.doors
       if door["code"] == code
         return door
       end
@@ -335,10 +335,10 @@ class Cc1101Gateway
   end
 
   def update_link(id, updates)
-    for link in self.links
+    for link : self.links
       if link["id"] == id
-        for k, v in updates
-          link[k] = v
+        for k : updates.keys()
+          link[k] = updates[k]
         end
         self.save_links()
         return true
@@ -361,7 +361,7 @@ class Cc1101Gateway
   end
 
   def find_link(id)
-    for link in self.links
+    for link : self.links
       if link["id"] == id
         return link
       end
@@ -452,7 +452,7 @@ class Cc1101Gateway
     if ids != nil
       if classname(ids) == "list"
         var idx = 0
-        for id in ids
+        for id : ids
           if delay_ms > 0 && idx > 0
             tasmota.delay(delay_ms)
           end
@@ -665,7 +665,7 @@ class Cc1101Gateway
 
   def execute_links(door_id, state)
     import mqtt
-    for link in self.links
+    for link : self.links
       if link["enabled"]
         if link["door_id"] == door_id && link["trigger_state"] == state
           if link["action_type"] == "rf_send"
@@ -702,10 +702,10 @@ class Cc1101Gateway
   end
 
   def publish_ha_discovery_all()
-    for door in self.doors
+    for door : self.doors
       self.publish_ha_discovery_door(door)
     end
-    for remote in self.remotes
+    for remote : self.remotes
       self.publish_ha_discovery_remote(remote)
     end
   end
@@ -774,7 +774,7 @@ class Cc1101Gateway
 
   def json_append()
     import json
-    for door in self.doors
+    for door : self.doors
       tasmota.response_append(f',"{door["name"]}":{{"State":"{door["state"]}","Code":{door["code"]}}}')
     end
   end
@@ -829,7 +829,7 @@ class Cc1101Gateway
     html += "<table style='width:100%'><tr><th>ID</th><th>Name</th><th>Group</th><th>Protocol</th><th>Actions</th></tr>"
 
     var count = 0
-    for remote in self.remotes
+    for remote : self.remotes
       if search != ""
         var lower = str(search).lower()
         if str(remote["name"]).lower().find(lower) == nil && str(remote["group"]).lower().find(lower) == nil
@@ -1041,7 +1041,7 @@ class Cc1101Gateway
 
     html += "<table style='width:100%'><tr><th>ID</th><th>Name</th><th>Location</th><th>State</th><th>Actions</th></tr>"
 
-    for door in self.doors
+    for door : self.doors
       var state_color = "var(--c_txtscc)"
       if door["state"] == "OPEN"
         state_color = "var(--c_txtwrn)"
@@ -1189,7 +1189,7 @@ class Cc1101Gateway
 
     if webserver.has_arg("toggle")
       var id = int(webserver.arg("toggle"))
-      for link in self.links
+      for link : self.links
         if link["id"] == id
           link["enabled"] = !link["enabled"]
           self.save_links()
@@ -1215,7 +1215,7 @@ class Cc1101Gateway
 
     html += "<table style='width:100%'><tr><th>ID</th><th>Door</th><th>Trigger</th><th>Action</th><th>Status</th><th>Actions</th></tr>"
 
-    for link in self.links
+    for link : self.links
       var door_name = "?"
       var d = self.find_door(link["door_id"])
       if d != nil  door_name = d["name"]  end
@@ -1233,11 +1233,16 @@ class Cc1101Gateway
         toggle_btn = "Disable"
       end
 
+      var status_text = "OFF"
+      if link["enabled"]
+        status_text = "ON"
+      end
+
       html += f"<tr><td>{link['id']}</td>"
       html += f"<td>{webserver.html_escape(door_name)}</td>"
       html += f"<td>{link['trigger_state']}</td>"
       html += f"<td>{webserver.html_escape(action_desc)}</td>"
-      html += f"<td>{'ON' if link['enabled'] else 'OFF'}</td>"
+      html += f"<td>{status_text}</td>"
       html += "<td>"
       html += f"<button onclick='la(\"&toggle={link['id']}\");'>{toggle_btn}</button>"
       html += f"<button class='bred' onclick='if(confirm(\"Delete?\"))la(\"&delete={link['id']}\");'>Delete</button>"
@@ -1254,7 +1259,7 @@ class Cc1101Gateway
       html += "<hr><h4>Add New Rule</h4>"
       html += "<form method='get' action='/link'>"
       html += "<p><label><b>Door Sensor</b></label><br><select id='door_id' name='door_id'>"
-      for door in self.doors
+      for door : self.doors
         html += f"<option value='{door['id']}'>{webserver.html_escape(door['name'])}</option>"
       end
       html += "</select></p>"
@@ -1267,7 +1272,7 @@ class Cc1101Gateway
       html += "<option value='mqtt_publish'>Publish MQTT</option>"
       html += "</select></p>"
       html += "<div id='rf_send_opts'><p><label><b>Remote</b></label><br><select id='remote_id' name='remote_id'>"
-      for remote in self.remotes
+      for remote : self.remotes
         html += f"<option value='{remote['id']}'>{webserver.html_escape(remote['name'])}</option>"
       end
       html += "</select></p></div>"
@@ -1315,6 +1320,7 @@ class Cc1101Gateway
         return
       end
     except
+      nil
     end
     webserver.content_send("")
   end
