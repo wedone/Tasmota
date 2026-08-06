@@ -19,7 +19,7 @@
 - MQTT 接入与 Home Assistant 自动发现
 
 #### 目标
-- 在不修改 Tasmota C++ 核心的前提下，通过 Berry 脚本扩展实现全部业务逻辑与 WebUI（CC1101 驱动移植除外）
+- 在 Tasmota 固件框架内实现全部业务逻辑与 WebUI，实现方式不做强制限制（可使用 Berry 脚本、C 扩展驱动，或二者混合，优先选择可靠性高、易于维护的方案）
 - 复用已验证的 CC1101 + RCSwitch 驱动能力，缩短开发周期
 - 设备重启后遥控器与门磁数据不丢失
 - 通过 MQTT 接入 Home Assistant，实现门磁状态联动与遥控器重放触发
@@ -38,7 +38,7 @@
 | **RCSwitch** | 开源 433MHz 协议库，支持协议 1~24 的固定码解码与发送 |
 | **GDO0 / GDO2** | CC1101 的通用数字输出引脚，GDO0 用于数据包中断，GDO2 用于状态/辅助中断 |
 | **UFS** | Tasmota 的用户文件系统（基于 ESP32 flash 分区），用于持久化数据 |
-| **Berry** | Tasmota 内嵌的 Python 风格脚本语言，用于扩展功能而不修改 C++ 核心 |
+| **Berry** | Tasmota 内嵌的 Python 风格脚本语言，用于扩展 Tasmota 功能（本项目的可选实现方式之一） |
 | **xdrv** | Tasmota 的驱动框架编号前缀（如 xdrv_52 为 Berry 引擎） |
 | **SSE** | Server-Sent Events，WebUI 动态数据推送机制 |
 | **HA Discovery** | Home Assistant 自动发现机制，设备上线后自动注册实体 |
@@ -113,7 +113,7 @@
 - 门磁数据持久化（名称、固定码、当前状态、最后触发时间）
 - 联动规则持久化（门磁 ID、触发条件、目标遥控器 ID）
 - 设备重启后数据不丢失
-- 通过 Berry `persist` 模块或 UFS 文件系统存储
+- 通过 UFS 文件系统存储（`path.write_file()`）或 Berry `persist` 模块
 
 #### 2.1.7 MQTT 与 Home Assistant 集成
 - 门磁状态通过 MQTT 发布（state_topic，payload_on/off）
@@ -245,14 +245,14 @@
 
 ### 4.3 WebUI 定制
 
-- **FR-3.1**：通过 Berry `webserver.on()` 注册以下自定义页面路由：
+- **FR-3.1**：注册以下自定义页面路由（通过 Tasmota WebHandler 机制，Berry `webserver.on()` 或 C `FUNC_WEB_ADD_HANDLER` 均可）：
   - `/rf` — 遥控器管理主页
   - `/rf/record` — 录制页
   - `/rf/edit?id=N` — 编辑页
   - `/door` — 门磁管理主页
   - `/door/edit?id=N` — 门磁编辑页
   - `/link` — 联动配置页
-- **FR-3.2**：通过 `web_add_main_button()` 在 Tasmota 主页添加"433 网关"快捷入口按钮
+- **FR-3.2**：通过 `web_add_main_button()` 回调（Berry 或 C）在 Tasmota 主页添加"433 网关"快捷入口按钮
 - **FR-3.3**：主页 `web_sensor()` 中追加 CC1101 状态行：`{s}CC1101{m}Ready (RX){e}` 或 `{s}CC1101{m}Not installed{e}`
 - **FR-3.4**：列表页支持 AJAX 刷新，无需整页刷新
 - **FR-3.5**：所有按钮动作通过 `la("&cmd=...")` 触发，遵循 Tasmota WebUI 风格
@@ -261,13 +261,13 @@
 
 ### 4.4 数据存储
 
-- **FR-4.1**：使用 Berry `persist` 模块存储元数据（计数器、最后操作时间）到 `_persist.json`
+- **FR-4.1**：使用 UFS 文件系统（`path.write_file()` / C 文件 API）或 Berry `persist` 模块存储元数据（计数器、最后操作时间）
 - **FR-4.2**：使用 UFS 文件系统存储主数据：
   - `/rf_remotes.json` — 遥控器列表
   - `/rf_doors.json` — 门磁列表
   - `/rf_links.json` — 联动规则列表
   - `/rf_events.log` — 最近 100 条事件日志（环形覆盖）
-- **FR-4.3**：每次新增/编辑/删除操作后立即写盘（`persist.save()` 或 `path.write_file()`）
+- **FR-4.3**：每次新增/编辑/删除操作后立即写盘（`persist.save()`、`path.write_file()` 或 C 文件 API）
 - **FR-4.4**：启动时读取并校验 JSON 完整性，损坏时备份为 `.bak` 并重新初始化
 - **FR-4.5**：JSON 字段使用 UTF-8 编码，名称最长 32 字符，备注最长 128 字符
 - **FR-4.6**：提供 `cmnd/<dev>/rf_backup` 导出全部数据为单个 JSON 文件
@@ -299,15 +299,15 @@
 - **NFR-1.4**：单次发射时长 ≤ 500ms（含重发 10 次）
 - **NFR-1.5**：遥控器条目上限 64，门磁上限 32，联动规则上限 64
 - **NFR-1.6**：UFS 数据文件总大小 ≤ 32KB
-- **NFR-1.7**：Berry 运行时占用堆内存 ≤ 30KB
+- **NFR-1.7**：业务模块（Berry 或 C）运行时占用堆内存 ≤ 30KB
 - **NFR-1.8**：WebUI 页面首屏渲染 ≤ 1 秒（局域网环境）
 
 ### 5.2 可靠性与异常处理
-- **NFR-2.1**：CC1101 初始化失败时 WebUI 显示"未安装"，Berry 业务降级（仅显示提示，不阻塞其他 Tasmota 功能）
+- **NFR-2.1**：CC1101 初始化失败时 WebUI 显示"未安装"，业务降级（仅显示提示，不阻塞其他 Tasmota 功能）
 - **NFR-2.2**：CC1101 在连续 60 秒无信号时自动校准（重启 RX）
 - **NFR-2.3**：JSON 文件损坏时自动备份并重建，不影响系统启动
 - **NFR-2.4**：MQTT 断线时本地联动规则继续执行，缓存事件 10 条，重连后补发
-- **NFR-2.5**：Berry 脚本异常时通过 `tasmota.rtc` 或日志记录错误，不导致系统重启
+- **NFR-2.5**：业务代码异常时通过日志记录错误，不导致系统重启
 - **NFR-2.6**：发射过程中断 RX 监听不超过 1 秒，避免门磁事件长时间丢失
 - **NFR-2.7**：所有写盘操作失败时返回明确错误码，不静默丢失数据
 - **NFR-2.8**：使用 TasAutoMutex 保护 CC1101 SPI 访问，避免多任务竞态
@@ -319,7 +319,7 @@
   - MOSI=GPIO23, MISO=GPIO19, SCK=GPIO18, CS=GPIO5
   - GDO0=GPIO4, GDO2=GPIO22
 - **NFR-3.4**：禁止使用 GPIO 6-11（内部 Flash）与 GPIO 2（板载 LED，避免与 GDO2 冲突）
-- **NFR-3.5**：Flash 总容量 4MB，分区表需为 Berry + UFS 预留 ≥ 1MB
+- **NFR-3.5**：Flash 总容量 4MB，分区表需为 UFS 文件系统预留 ≥ 320KB（如使用 Berry 则需额外预留脚本存储空间）
 - **NFR-3.6**：CC1101 模块型号 HL-RF433A16-B V2.1，固定 433.92MHz
 
 ---
@@ -536,7 +536,8 @@
 - RCSwitch 协议库：`https://github.com/wedone/SmartRF-IDF/tree/main/components/RCSwitch/`
 
 #### 7.2.4 Tasmota 关键源码位置（移植参考）
-- Berry 引擎驱动：[tasmota/tasmota_xdrv_driver/xdrv_52_9_berry.ino](../tasmota/tasmota_xdrv_driver/xdrv_52_9_berry.ino)
+- Berry 引擎驱动（可选实现方式）：[tasmota/tasmota_xdrv_driver/xdrv_52_9_berry.ino](../tasmota/tasmota_xdrv_driver/xdrv_52_9_berry.ino)
+- C 驱动框架示例（业务实现参考）：[tasmota/tasmota_xdrv_driver/xdrv_74_cc1101.ino](../tasmota/tasmota_xdrv_driver/xdrv_74_cc1101.ino)
 - Web 服务器：[tasmota/tasmota_xdrv_driver/xdrv_01_9_webserver.ino](../tasmota/tasmota_xdrv_driver/xdrv_01_9_webserver.ino)
 - HA Discovery：[tasmota/tasmota_xdrv_driver/xdrv_12_home_assistant.ino](../tasmota/tasmota_xdrv_driver/xdrv_12_home_assistant.ino)
 - MQTT：[tasmota/tasmota_xdrv_driver/xdrv_02_9_mqtt.ino](../tasmota/tasmota_xdrv_driver/xdrv_02_9_mqtt.ino)
@@ -563,5 +564,5 @@
 **文档版本**: 1.0
 **创建日期**: 2026-08-05
 **适用硬件**: Yuzuki ESP32 SOLO + HL-RF433A16-B (433.92MHz)
-**适用平台**: Tasmota ESP32 + Berry
+**适用平台**: Tasmota ESP32（业务实现方式：C 驱动与 Berry 脚本混合，不受限）
 **状态**: 草稿完成，待评审
