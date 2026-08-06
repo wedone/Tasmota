@@ -311,25 +311,23 @@ extern "C" {
   }
 
   int be_cc1101_receive(struct bvm *vm) {
+    char buf[128];
     if (!rf_rx_data.available || !cc1101_status.initialized) {
-      be_pushint(vm, 0);
-      be_pushint(vm, 0);
-      be_pushint(vm, 0);
-      be_pushint(vm, 0);
-      be_return(vm);
+      snprintf(buf, sizeof(buf), "{\"Value\":0,\"Bits\":0,\"Protocol\":0,\"Pulse\":0}");
+    } else {
+      snprintf(buf, sizeof(buf), "{\"Value\":%llu,\"Bits\":%d,\"Protocol\":%d,\"Pulse\":%d}",
+        (unsigned long long)rf_rx_data.value, rf_rx_data.bits, rf_rx_data.protocol, rf_rx_data.delay);
+      rf_rx_data.available = false;
     }
-    be_pushint(vm, (bint)rf_rx_data.value);
-    be_pushint(vm, (bint)rf_rx_data.bits);
-    be_pushint(vm, (bint)rf_rx_data.protocol);
-    be_pushint(vm, (bint)rf_rx_data.delay);
-    rf_rx_data.available = false;
+    be_pushstring(vm, buf);
     be_return(vm);
   }
 
   int be_cc1101_status(struct bvm *vm) {
-    be_pushint(vm, cc1101_status.initialized ? 1 : 0);
-    be_pushint(vm, (bint)cc1101_status.version);
-    be_pushint(vm, (bint)cc1101_status.partnum);
+    char buf[64];
+    snprintf(buf, sizeof(buf), "{\"Initialized\":%d,\"Version\":%d,\"Partnum\":%d}",
+      cc1101_status.initialized ? 1 : 0, cc1101_status.version, cc1101_status.partnum);
+    be_pushstring(vm, buf);
     be_return(vm);
   }
 

@@ -448,6 +448,7 @@ class Cc1101Gateway
 
     var ids = payload_json.find("id")
     var delay_ms = payload_json.find("delay", 0)
+    if delay_ms == nil  delay_ms = 0  end
 
     if ids != nil
       if classname(ids) == "list"
@@ -568,10 +569,10 @@ class Cc1101Gateway
 
   def cmd_rf_status()
     import json
-    var init, ver, part = cc1101_status()
+    var st = json.load(cc1101_status())
     var status = {
-      "Initialized": init == 1,
-      "Version": ver,
+      "Initialized": st.find("Initialized", 0) == 1,
+      "Version": st.find("Version", 0),
       "Remotes": size(self.remotes),
       "Doors": size(self.doors),
       "Links": size(self.links)
@@ -580,28 +581,41 @@ class Cc1101Gateway
   end
 
   def every_50ms()
-    self.check_rf_receive()
+    try
+      self.check_rf_receive()
+    except .. as e, m
+      log(f"CC1: every_50ms error: {e} {m}", 3)
+    end
   end
 
   def every_second()
-    if self.recording
-      if tasmota.time_reached(self.record_timeout)
-        self.recording = false
-        tasmota.remove_timer(self._TIMER_RECORD)
+    try
+      if self.recording
+        if tasmota.time_reached(self.record_timeout)
+          self.recording = false
+          tasmota.remove_timer(self._TIMER_RECORD)
+        end
       end
-    end
-    if self.learn_mode
-      if tasmota.time_reached(self.learn_timeout)
-        self.learn_mode = false
-        self.learn_result = nil
-        tasmota.remove_timer(self._TIMER_RECORD)
+      if self.learn_mode
+        if tasmota.time_reached(self.learn_timeout)
+          self.learn_mode = false
+          self.learn_result = nil
+          tasmota.remove_timer(self._TIMER_RECORD)
+        end
       end
+    except .. as e, m
+      log(f"CC1: every_second error: {e} {m}", 3)
     end
   end
 
   def check_rf_receive()
     try
-      var value, bits, protocol, delay_val = cc1101_receive()
+      import json
+      var rx = json.load(cc1101_receive())
+      var value = rx.find("Value", 0)
+      var bits = rx.find("Bits", 0)
+      var protocol = rx.find("Protocol", 0)
+      var delay_val = rx.find("Pulse", 0)
       if value > 0
         if self.learn_mode
           self.learn_result = {"value": value, "bits": bits, "protocol": protocol, "pulse_length": delay_val}
@@ -613,8 +627,8 @@ class Cc1101Gateway
           self.handle_rx(value, bits, protocol, delay_val)
         end
       end
-    except
-      log("CC1: RF receive error", 3)
+    except .. as e, m
+      log(f"CC1: RF receive error: {e} {m}", 3)
     end
   end
 
@@ -755,9 +769,10 @@ class Cc1101Gateway
 
   def web_sensor()
     import webserver
+    import json
     try
-      var init, ver, part = cc1101_status()
-      if init == 1
+      var st = json.load(cc1101_status())
+      if st.find("Initialized", 0) == 1
         tasmota.web_send("{s}CC1101{m}Ready (RX){e}")
       else
         tasmota.web_send("{s}CC1101{m}Not installed{e}")
@@ -890,6 +905,10 @@ class Cc1101Gateway
       var pulse = int(webserver.arg("pulse_length"))
       var repeat = int(webserver.arg("repeat"))
       var note = webserver.arg("note")
+
+      if value == nil  value = 0  end
+      if bits == nil  bits = 0  end
+      if protocol == nil  protocol = 0  end
 
       if name != "" && value > 0
         self.add_remote(name, group, protocol, value, bits, pulse, repeat, nil, note)
@@ -1124,6 +1143,9 @@ class Cc1101Gateway
       var bits = int(webserver.arg("bits"))
       var note = webserver.arg("note")
 
+      if code == nil  code = 0  end
+      if bits == nil  bits = 0  end
+
       if id > 0 && door != nil
         self.update_door(id, {"name": name, "location": location, "code": code, "bits": bits, "note": note})
         html += "<p style='color:var(--c_txtscc);'>Saved!</p>"
@@ -1202,8 +1224,10 @@ class Cc1101Gateway
       var door_id = int(webserver.arg("door_id"))
       var trigger = webserver.arg("trigger_state")
       var action_type = webserver.arg("action_type")
+      if door_id == nil  door_id = 0  end
       if action_type == "rf_send"
         var remote_id = int(webserver.arg("remote_id"))
+        if remote_id == nil  remote_id = 0  end
         self.add_link(door_id, trigger, "rf_send", {"remote_id": remote_id})
       elif action_type == "mqtt_publish"
         var topic = webserver.arg("mqtt_topic")
@@ -1308,7 +1332,11 @@ class Cc1101Gateway
     end
 
     try
-      var value, bits, protocol, delay_val = cc1101_receive()
+      var rx = json.load(cc1101_receive())
+      var value = rx.find("Value", 0)
+      var bits = rx.find("Bits", 0)
+      var protocol = rx.find("Protocol", 0)
+      var delay_val = rx.find("Pulse", 0)
       if value > 0
         var resp = json.dump({
           "value": value,
