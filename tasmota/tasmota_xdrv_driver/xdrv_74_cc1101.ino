@@ -71,12 +71,14 @@ static struct {
   uint32_t last_rx_time;
 } cc1101_status;
 
+static int cc1101_cs_pin = CC1101_CS_DEFAULT;
+
 static void cc1101_select(void) {
-  digitalWrite(CC1101_CS, LOW);
+  digitalWrite(cc1101_cs_pin, LOW);
 }
 
 static void cc1101_deselect(void) {
-  digitalWrite(CC1101_CS, HIGH);
+  digitalWrite(cc1101_cs_pin, HIGH);
 }
 
 static void cc1101_wait_miso(void) {
@@ -175,6 +177,7 @@ bool cc1101_init_hw(void) {
   if (cs_pin < 0) cs_pin = CC1101_CS_DEFAULT;
   if (gdo0_pin < 0) gdo0_pin = CC1101_GDO0_DEFAULT;
   if (gdo2_pin < 0) gdo2_pin = CC1101_GDO2_DEFAULT;
+  cc1101_cs_pin = cs_pin;
 
   if (cc1101_spi == nullptr) {
     cc1101_spi = new SPIClass(VSPI);
@@ -204,8 +207,6 @@ bool cc1101_init_hw(void) {
   cc1101_set_ask_ook();
   delay(10);
 
-  int gdo0_pin = Pin(GPIO_CC1101_GDO0);
-  if (gdo0_pin < 0) gdo0_pin = CC1101_GDO0_DEFAULT;
   cc1101_rcswitch.enableReceive(gdo0_pin);
   cc1101_rcswitch.setReceiveTolerance(60);
 
