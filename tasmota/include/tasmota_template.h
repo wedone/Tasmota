@@ -91,7 +91,7 @@ enum UserSelectablePins {
   GPIO_GPS_RX, GPIO_GPS_TX,            // GPS Serial interface
   GPIO_HM10_RX, GPIO_HM10_TX,          // HM10-BLE-Mijia-bridge Serial interface
   GPIO_LE01MR_RX, GPIO_LE01MR_TX,      // F&F LE-01MR energy meter
-  GPIO_CC1101_GDO0, GPIO_CC1101_GDO2,  // CC1101 Serial interface
+  GPIO_CC1101_GDO0, GPIO_CC1101_GDO2, GPIO_CC1101_CS,  // CC1101 Serial interface
   GPIO_HRXL_RX,                        // Data from MaxBotix HRXL sonar range sensor
   GPIO_ELECTRIQ_MOODL_TX,              // ElectriQ iQ-wifiMOODL Serial TX
   GPIO_AS3935,                         // Franklin Lightning Sensor
@@ -1214,9 +1214,10 @@ const uint16_t kGpioNiceList[] PROGMEM = {
 #ifdef USE_DEEPSLEEP
   AGPIO(GPIO_DEEPSLEEP),
 #endif
-#ifdef USE_KEELOQ
+#if defined(USE_KEELOQ) || defined(USE_CC1101_GATEWAY)
   AGPIO(GPIO_CC1101_GDO0),                       // CC1101 pin for RX
   AGPIO(GPIO_CC1101_GDO2),                       // CC1101 pin for RX
+  AGPIO(GPIO_CC1101_CS),                         // CC1101 SPI CS
 #endif
 #ifdef USE_HRXL
   AGPIO(GPIO_HRXL_RX),
