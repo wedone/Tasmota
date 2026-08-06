@@ -105,6 +105,16 @@ static uint8_t cc1101_read_reg(uint8_t addr) {
   return value;
 }
 
+static uint8_t cc1101_read_status(uint8_t addr) {
+  uint8_t value;
+  cc1101_select();
+  cc1101_wait_miso();
+  cc1101_spi->transfer(addr | CC1101_READ_BURST);
+  value = cc1101_spi->transfer(0x00);
+  cc1101_deselect();
+  return value;
+}
+
 static void cc1101_cmd_strobe(uint8_t cmd) {
   cc1101_select();
   cc1101_wait_miso();
@@ -196,8 +206,8 @@ bool cc1101_init_hw(void) {
   cc1101_reset();
   delay(10);
 
-  cc1101_status.partnum = cc1101_read_reg(CC1101_PARTNUM);
-  cc1101_status.version = cc1101_read_reg(CC1101_VERSION);
+  cc1101_status.partnum = cc1101_read_status(CC1101_PARTNUM);
+  cc1101_status.version = cc1101_read_status(CC1101_VERSION);
 
   if (cc1101_status.partnum != 0 || (cc1101_status.version != 4 && cc1101_status.version != 20)) {
     AddLog(LOG_LEVEL_ERROR, PSTR("CC1: CC1101 not found (PARTNUM=%d, VERSION=%d)"),
