@@ -927,6 +927,9 @@ class Cc1101Gateway
     for remote : self.remotes
       self.publish_ha_discovery_remote(remote)
     end
+    for vd : self.virtual_devices
+      self.publish_ha_vdevice(vd)
+    end
   end
 
   def publish_ha_discovery_door(door)
@@ -970,6 +973,88 @@ class Cc1101Gateway
       }
     }
     mqtt.publish(f"homeassistant/button/{dev}_remote_{remote['id']}/config", json.dump(config), true)
+  end
+
+  def cmd_rf_vdevice(payload, payload_json)
+    import json
+    if payload_json == nil
+      tasmota.resp_cmnd_str('{"VDevice":"error","reason":"invalid_json"}')
+      return
+    end
+    var cmd = payload_json.find("cmd")
+    if cmd == "list"
+      tasmota.resp_cmnd_str(json.dump({"Devices": self.virtual_devices}))
+      return
+    end
+    var name = payload_json.find("name")
+    if cmd == "save" && name != nil
+      var vd = {
+        "name": name,
+        "on_sequence": payload_json.find("on_sequence", ""),
+        "off_sequence": payload_json.find("off_sequence", ""),
+        "state": payload_json.find("state", "OFF")
+      }
+      self._upsert_vdevice(vd)
+      self.publish_ha_vdevice(vd)
+      tasmota.resp_cmnd_str('{"VDevice":"saved"}')
+      return
+    end
+    if cmd == "delete" && name != nil
+      self._delete_vdevice(name)
+      tasmota.resp_cmnd_str('{"VDevice":"deleted"}')
+      return
+    end
+    tasmota.resp_cmnd_str('{"VDevice":"error","reason":"bad_request"}')
+  end
+
+  def _upsert_vdevice(vd)
+    var found = false
+    for i : 0 .. size(self.virtual_devices) - 1
+      if self.virtual_devices[i]["name"] == vd["name"]
+        self.virtual_devices[i] = vd
+        found = true
+        break
+      end
+    end
+    if !found
+      self.virtual_devices.push(vd)
+    end
+    self.save_virtual_devices()
+  end
+
+  def _delete_vdevice(name)
+    var i = 0
+    while i < size(self.virtual_devices)
+      if self.virtual_devices[i]["name"] == name
+        self.virtual_devices.remove(i)
+        break
+      end
+      i += 1
+    end
+    self.save_virtual_devices()
+  end
+
+  def publish_ha_vdevice(vd)
+    import mqtt
+    import json
+    var dev = self._get_device_name()
+    var cfg = {
+      "name": vd["name"],
+      "command_topic": f"cmnd/{dev}/rf_vdevice/{vd['name']}",
+      "state_topic": f"tele/{dev}/rf_vdevice/{vd['name']}",
+      "payload_on": "ON",
+      "payload_off": "OFF",
+      "unique_id": f"{dev}_vd_{vd['name']}",
+      "device": {"identifiers": [dev], "name": "CC1101 Gateway",
+                 "model": "Tasmota CC1101", "manufacturer": "Tasmota"}
+    }
+    mqtt.publish(f"homeassistant/switch/{dev}_vd_{vd['name']}/config", json.dump(cfg), true)
+  end
+
+  def publish_vdevice_state(vd)
+    import mqtt
+    var dev = self._get_device_name()
+    mqtt.publish(f"tele/{dev}/rf_vdevice/{vd['name']}", vd["state"])
   end
 
   def web_sensor()
@@ -1563,6 +1648,30 @@ class Cc1101Gateway
   end
 
   def mqtt_data(topic, idx, data, databytes)
+    import json
+    var dev = self._get_device_name()
+    var prefix = "cmnd/" + dev + "/rf_vdevice/"
+    if topic.find(prefix) == 0
+      var name = topic[size(prefix) .. ]
+      for vd : self.virtual_devices
+        if vd["name"] == name
+          var payload = str(data).upper()
+          if payload.find("ON") != nil
+            vd["state"] = "ON"
+            self.save_virtual_devices()
+            self.seq_run_by_name(vd["on_sequence"])
+            self.publish_vdevice_state(vd)
+            return true
+          elif payload.find("OFF") != nil
+            vd["state"] = "OFF"
+            self.save_virtual_devices()
+            self.seq_run_by_name(vd["off_sequence"])
+            self.publish_vdevice_state(vd)
+            return true
+          end
+        end
+      end
+    end
     return false
   end
 end
