@@ -8,6 +8,7 @@ class Cc1101Gateway
   var learn_mode, learn_timeout, learn_result
   var last_event_ts
   var device_name
+  var seq_running_seq, seq_running_index, seq_delay_until, seq_stop_requested
 
   static var _DATA_DIR = ""
   static var _FILE_REMOTES = "/rf_remotes.json"
@@ -41,6 +42,10 @@ class Cc1101Gateway
     self.learn_result = nil
     self.last_event_ts = 0
     self.device_name = ""
+    self.seq_running_seq = nil
+    self.seq_running_index = 0
+    self.seq_delay_until = 0
+    self.seq_stop_requested = false
 
     self.load_data()
     self.register_commands()
@@ -456,6 +461,12 @@ class Cc1101Gateway
     tasmota.add_cmd("RfStatus", def(cmd, idx, payload, payload_json)
       self.cmd_rf_status()
     end)
+    tasmota.add_cmd("RfSequence", def(cmd, idx, payload, payload_json)
+      self.cmd_rf_sequence(payload, payload_json)
+    end)
+    tasmota.add_cmd("RfVDevice", def(cmd, idx, payload, payload_json)
+      self.cmd_rf_vdevice(payload, payload_json)
+    end)
   end
 
   def register_webui()
@@ -651,8 +662,131 @@ class Cc1101Gateway
     tasmota.resp_cmnd_str(json.dump(status))
   end
 
+  def cmd_rf_sequence(payload, payload_json)
+    import json
+    if payload_json == nil
+      tasmota.resp_cmnd_str('{"Sequence":"error","reason":"invalid_json"}')
+      return
+    end
+    var cmd = payload_json.find("cmd")
+    if cmd == "list"
+      tasmota.resp_cmnd_str(json.dump({"Sequences": self.sequences}))
+      return
+    end
+    var name = payload_json.find("name")
+    if cmd == "save" && name != nil
+      self._upsert_sequence(name, payload_json.find("steps", []))
+      tasmota.resp_cmnd_str('{"Sequence":"saved"}')
+      return
+    end
+    if cmd == "delete" && name != nil
+      self._delete_sequence(name)
+      tasmota.resp_cmnd_str('{"Sequence":"deleted"}')
+      return
+    end
+    if cmd == "run" && name != nil
+      self.seq_run_by_name(name)
+      tasmota.resp_cmnd_str('{"Sequence":"running"}')
+      return
+    end
+    if cmd == "stop"
+      self.seq_stop()
+      tasmota.resp_cmnd_str('{"Sequence":"stopped"}')
+      return
+    end
+    tasmota.resp_cmnd_str('{"Sequence":"error","reason":"bad_request"}')
+  end
+
+  def _upsert_sequence(name, steps)
+    var found = false
+    for seq : self.sequences
+      if seq["name"] == name
+        seq["steps"] = steps
+        found = true
+        break
+      end
+    end
+    if !found
+      self.sequences.push({"name": name, "steps": steps})
+    end
+    self.save_sequences()
+  end
+
+  def _delete_sequence(name)
+    var i = 0
+    while i < size(self.sequences)
+      if self.sequences[i]["name"] == name
+        self.sequences.remove(i)
+        break
+      end
+      i += 1
+    end
+    self.save_sequences()
+  end
+
+  def seq_run_by_name(name)
+    for seq : self.sequences
+      if seq["name"] == name
+        # 抢占式单实例：立即终止当前序列，从新序列第 1 步开始
+        self.seq_stop_requested = true
+        self.seq_running_seq = nil
+        self.seq_stop_requested = false
+        self.seq_running_seq = seq
+        self.seq_running_index = 0
+        self.seq_delay_until = 0
+        self.add_event("seq_start", {"seq": name})
+        return true
+      end
+    end
+    return false
+  end
+
+  def seq_stop()
+    self.seq_stop_requested = true
+    self.seq_running_seq = nil
+    self.seq_running_index = 0
+    self.seq_delay_until = 0
+    self.add_event("seq_stop", {})
+  end
+
+  def seq_tick()
+    if self.seq_running_seq == nil || self.seq_stop_requested
+      self.seq_running_seq = nil
+      return
+    end
+    var seq = self.seq_running_seq
+    var steps = seq["steps"]
+    if self.seq_running_index >= size(steps)
+      self.add_event("seq_done", {"seq": seq["name"]})
+      self.seq_running_seq = nil
+      self.seq_running_index = 0
+      return
+    end
+    var step = steps[self.seq_running_index]
+    if self.seq_delay_until == 0
+      if step["type"] == "send"
+        if step.find("remote_id") != nil
+          if step.find("button_id") != nil
+            self.send_remote_button(step["remote_id"], step["button_id"])
+          else
+            self._send_remote_by_id(step["remote_id"])
+          end
+        end
+        self.seq_running_index += 1
+      elif step["type"] == "delay"
+        self.seq_delay_until = tasmota.millis() + step["ms"]
+      end
+    else
+      if tasmota.millis() >= self.seq_delay_until
+        self.seq_delay_until = 0
+        self.seq_running_index += 1
+      end
+    end
+  end
+
   def every_50ms()
     try
+      self.seq_tick()
       self.check_rf_receive()
     except .. as e, m
       log(f"CC1: every_50ms error: {e} {m}", 3)
