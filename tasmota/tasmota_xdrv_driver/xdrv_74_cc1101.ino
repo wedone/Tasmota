@@ -21,6 +21,7 @@
 
 #define CC1101_IOCFG2       0x00
 #define CC1101_IOCFG0       0x02
+#define CC1101_PKTCTRL1     0x07
 #define CC1101_PKTCTRL0     0x08
 #define CC1101_FREQ2        0x0D
 #define CC1101_FREQ1        0x0E
@@ -40,6 +41,7 @@
 #define CC1101_TEST0        0x2E
 #define CC1101_PARTNUM      0x30
 #define CC1101_VERSION      0x31
+#define CC1101_RSSI         0x34
 #define CC1101_MARCSTATE    0x35
 #define CC1101_TXFIFO       0x3F
 #define CC1101_RXFIFO       0x3F
@@ -138,11 +140,16 @@ static void cc1101_reset(void) {
 
 static void cc1101_set_ask_ook(void) {
   cc1101_cmd_strobe(CC1101_SIDLE);
+  // 照搬旧项目 SmartRF-IDF 实测可解码的 setAskOokMode() 配置
   cc1101_write_reg(CC1101_IOCFG2, 0x0D);
   cc1101_write_reg(CC1101_IOCFG0, 0x0D);
+  // PKTCTRL1=0x06: 与旧项目 setCCregs 默认一致
+  cc1101_write_reg(CC1101_PKTCTRL1, 0x06);
+  // PKTCTRL0=0x32: 可变长度包，无 CRC（旧项目实测可解码）
   cc1101_write_reg(CC1101_PKTCTRL0, 0x32);
   cc1101_write_reg(CC1101_MDMCFG4, 0x06);
   cc1101_write_reg(CC1101_MDMCFG3, 0x43);
+  // MDMCFG2=0x32: ASK/OOK + Manchester 使能（旧项目实测可解码）
   cc1101_write_reg(CC1101_MDMCFG2, 0x32);
   cc1101_write_reg(CC1101_DEVIATN, 0x47);
   cc1101_write_reg(CC1101_FREQ2, 0x10);
@@ -159,12 +166,24 @@ static void cc1101_set_ask_ook(void) {
   cc1101_write_reg(CC1101_TEST0, 0x09);
   cc1101_write_reg(CC1101_PATABLE, 0x60);
   cc1101_cmd_strobe(CC1101_SRX);
+  AddLog(LOG_LEVEL_INFO, PSTR("CC1: RX mode (ASK/OOK, 433.92 MHz)"));
 }
 
 static void cc1101_set_idle(void) {
   cc1101_cmd_strobe(CC1101_SIDLE);
   cc1101_cmd_strobe(CC1101_SFTX);
   cc1101_cmd_strobe(CC1101_SFRX);
+}
+
+static int16_t cc1101_read_rssi(void) {
+  uint8_t raw = cc1101_read_status(CC1101_RSSI);
+  int16_t rssi;
+  if (raw >= 128) {
+    rssi = (int16_t)((raw - 256) / 2) - 74;
+  } else {
+    rssi = (int16_t)(raw / 2) - 74;
+  }
+  return rssi;
 }
 
 static void cc1101_set_rx(void) {
@@ -265,6 +284,8 @@ void cc1101_send_rf(uint64_t value, unsigned int bits, unsigned int protocol,
 void cc1101_every_50ms(void) {
   if (!cc1101_status.initialized) return;
 
+  uint32_t now = millis();
+
   if (cc1101_rcswitch.available()) {
     uint64_t value = cc1101_rcswitch.getReceivedValue();
     unsigned int bits = cc1101_rcswitch.getReceivedBitlength();
@@ -272,7 +293,6 @@ void cc1101_every_50ms(void) {
     unsigned int delay_val = cc1101_rcswitch.getReceivedDelay();
 
     if (value > 0) {
-      uint32_t now = millis();
       if (now - rf_rx_data.timestamp > 1000 || rf_rx_data.value != value) {
         rf_rx_data.value = value;
         rf_rx_data.bits = bits;
@@ -282,8 +302,8 @@ void cc1101_every_50ms(void) {
         rf_rx_data.timestamp = now;
         cc1101_status.last_rx_time = now;
 
-        AddLog(LOG_LEVEL_DEBUG, PSTR("CC1: RX value=%llu bits=%u proto=%u delay=%u"),
-          value, bits, protocol, delay_val);
+        AddLog(LOG_LEVEL_INFO, PSTR("CC1: RX value=%llu bits=%u proto=%u delay=%u rssi=%d dBm"),
+          value, bits, protocol, delay_val, cc1101_read_rssi());
       }
     }
     cc1101_rcswitch.resetAvailable();
@@ -363,9 +383,11 @@ void Cc1101Init(void) {
   if (!PinUsed(GPIO_CC1101_GDO0) && !PinUsed(GPIO_CC1101_GDO2)) {
     return;
   }
-  if (cc1101_init_hw()) {
-    cc1101_register_berry_funcs();
-  }
+  // 无论硬件初始化成功与否，都注册 Berry C 函数。
+  // 否则若 CC1101 初始化失败，Berry 脚本中的 cc1101_* 函数未注册，
+  // 会导致 cc1101_gateway.be 加载失败，整个驱动脚本无法运行。
+  cc1101_init_hw();
+  cc1101_register_berry_funcs();
 }
 
 void Cc1101Every50ms(void) {

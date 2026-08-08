@@ -878,6 +878,7 @@ class Cc1101Gateway
     html += "</table><p></p>"
     html += "<form action='/door' method='get'><button>Door Sensors</button></form>"
     html += "<form action='/link' method='get'><button>Linkage Rules</button></form>"
+    html += "<form action='/' method='get'><button>Main Menu</button></form>"
     html += "<p></p>"
 
     if webserver.has_arg("send") || webserver.has_arg("delete")
