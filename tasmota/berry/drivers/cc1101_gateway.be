@@ -2,6 +2,7 @@
 
 class Cc1101Gateway
   var remotes, doors, links, events
+  var sequences, virtual_devices
   var next_remote_id, next_door_id, next_link_id
   var recording, record_timeout
   var learn_mode, learn_timeout, learn_result
@@ -13,6 +14,8 @@ class Cc1101Gateway
   static var _FILE_DOORS = "/rf_doors.json"
   static var _FILE_LINKS = "/rf_links.json"
   static var _FILE_EVENTS = "/rf_events.log"
+  static var _FILE_SEQUENCES = "/rf_sequences.json"
+  static var _FILE_VDEVICES = "/rf_virtual_devices.json"
   static var _MAX_REMOTES = 64
   static var _MAX_DOORS = 32
   static var _MAX_LINKS = 64
@@ -26,6 +29,8 @@ class Cc1101Gateway
     self.doors = []
     self.links = []
     self.events = []
+    self.sequences = []
+    self.virtual_devices = []
     self.next_remote_id = 1
     self.next_door_id = 1
     self.next_link_id = 1
@@ -64,6 +69,16 @@ class Cc1101Gateway
     if data != nil
       self.links = data.find("items", [])
       self.next_link_id = data.find("next_id", 1)
+    end
+
+    data = self._load_json_file(self._FILE_SEQUENCES)
+    if data != nil
+      self.sequences = data.find("items", [])
+    end
+
+    data = self._load_json_file(self._FILE_VDEVICES)
+    if data != nil
+      self.virtual_devices = data.find("items", [])
     end
 
     self._load_events()
@@ -126,6 +141,16 @@ class Cc1101Gateway
   def save_links()
     var data = {"version": 1, "next_id": self.next_link_id, "items": self.links}
     self._save_json_file(self._FILE_LINKS, data)
+  end
+
+  def save_sequences()
+    var data = {"version": 1, "items": self.sequences}
+    self._save_json_file(self._FILE_SEQUENCES, data)
+  end
+
+  def save_virtual_devices()
+    var data = {"version": 1, "items": self.virtual_devices}
+    self._save_json_file(self._FILE_VDEVICES, data)
   end
 
   def _load_events()
@@ -209,6 +234,7 @@ class Cc1101Gateway
       "repeat": repeat,
       "raw": raw,
       "note": note,
+      "buttons": [],
       "last_sent_at": 0
     }
     self.remotes.push(remote)
@@ -217,6 +243,27 @@ class Cc1101Gateway
     self.add_event("record", {"remote_id": remote["id"], "detail": f"protocol={protocol},value={value}"})
     self.publish_ha_discovery_remote(remote)
     return remote
+  end
+
+  def send_remote_button(remote_id, button_id)
+    var remote = self.find_remote(remote_id)
+    if remote == nil || remote["buttons"] == nil
+      return false
+    end
+    var button = nil
+    for b : remote["buttons"]
+      if b["id"] == button_id
+        button = b
+        break
+      end
+    end
+    if button == nil
+      return false
+    end
+    cc1101_send(button["value"], button["bits"], button["protocol"],
+      button.find("repeat", 10), button.find("pulse_length", 0))
+    self.add_event("send", {"remote_id": remote_id, "button_id": button_id, "detail": "button"})
+    return true
   end
 
   def update_remote(id, updates)
