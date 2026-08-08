@@ -77,15 +77,23 @@ class Cc1101Gateway
       return nil
     end
 
-    var content = path.read_file(filename)
+    var content = nil
+    try
+      var f = open(filename, "r")
+      content = f.read()
+      f.close()
+    except .. as e, m
+      log(f"CC1: load {filename} failed: {e} {m}", 3)
+      return nil
+    end
+
     if content == nil || size(content) == 0
       return nil
     end
 
     var data = json.load(content)
     if data == nil
-      log(f"CC1: JSON corrupt, backing up {filename}", 2)
-      path.rename(filename, filename + ".bak")
+      log(f"CC1: JSON corrupt {filename}", 2)
       return nil
     end
 
@@ -93,15 +101,16 @@ class Cc1101Gateway
   end
 
   def _save_json_file(filename, data)
-    import path
     import json
 
     var content = json.dump(data)
-    var bak = filename + ".bak"
-    if path.exists(filename)
-      path.rename(filename, bak)
+    try
+      var f = open(filename, "w")
+      f.write(content)
+      f.close()
+    except .. as e, m
+      log(f"CC1: save {filename} failed: {e} {m}", 3)
     end
-    path.write_file(filename, content)
   end
 
   def save_remotes()
@@ -127,7 +136,16 @@ class Cc1101Gateway
       return
     end
 
-    var content = path.read_file(self._FILE_EVENTS)
+    var content = nil
+    try
+      var f = open(self._FILE_EVENTS, "r")
+      content = f.read()
+      f.close()
+    except .. as e, m
+      log(f"CC1: load events failed: {e} {m}", 3)
+      return
+    end
+
     if content == nil
       return
     end
@@ -146,14 +164,20 @@ class Cc1101Gateway
   end
 
   def save_events()
-    import path
     import json
 
     var lines = ""
     for evt : self.events
       lines += json.dump(evt) + "\n"
     end
-    path.write_file(self._FILE_EVENTS, lines)
+
+    try
+      var f = open(self._FILE_EVENTS, "w")
+      f.write(lines)
+      f.close()
+    except .. as e, m
+      log(f"CC1: save events failed: {e} {m}", 3)
+    end
   end
 
   def add_event(evt_type, detail)
@@ -777,7 +801,7 @@ class Cc1101Gateway
       else
         tasmota.web_send("{s}CC1101{m}Not installed{e}")
       end
-    except
+    except .. as e, m
       tasmota.web_send("{s}CC1101{m}Not installed{e}")
     end
   end
@@ -1325,10 +1349,13 @@ class Cc1101Gateway
     import webserver
     import json
 
+    # API 返回用 content_response (WSReturnSimpleString)，正确设置响应头并结束响应。
+    # 之前用 content_send 会导致 HTTP 响应异常结束 (ResponseEnded)，前端轮询无法读取。
+
     if self.learn_result != nil
       var resp = json.dump(self.learn_result)
       self.learn_result = nil
-      webserver.content_send(resp)
+      webserver.content_response(resp)
       return
     end
 
@@ -1345,13 +1372,13 @@ class Cc1101Gateway
           "protocol": protocol,
           "pulse_length": delay_val
         })
-        webserver.content_send(resp)
+        webserver.content_response(resp)
         return
       end
-    except
-      nil
+    except .. as e, m
+      log(f"CC1: rf event error: {e} {m}", 3)
     end
-    webserver.content_send("")
+    webserver.content_response("")
   end
 
   def mqtt_data(topic, idx, data, databytes)
