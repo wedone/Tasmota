@@ -770,13 +770,14 @@ class Cc1101WebApp
           action_desc = "MQTT: " + link["action_payload"].find("topic", "")
         end
         var en_label = link["enabled"] ? "禁用" : "启用"
+        var en_short = link["enabled"] ? "ON" : "OFF"
         var st_color = link["enabled"] ? "#2e9e5b" : "#8e8e93"
         html += "<div class='card cell'>"
         html += f"<div class='ic'>🔗</div>"
         html += f"<div class='tx'><div class='t1'>{webserver.html_escape(door_name)} {link['trigger_state']}</div>"
         html += f"<div class='t2'>{webserver.html_escape(action_desc)}</div></div>"
-        html += f"<span style='font-size:11px;font-weight:600;color:{st_color};'>{link['enabled'] ? 'ON' : 'OFF'}</span>"
-        html += f"<a class='btn gray' style='padding:8px 12px;font-size:11px;margin:0;' href='/app/link?toggle={link['id']}'>{en_label}</a></div>"
+        html += f"<span style='font-size:11px;font-weight:600;color:{st_color};'>{en_short}</span>"
+        html += "<a class='btn gray' style='padding:8px 12px;font-size:11px;margin:0;' href='/app/link?toggle=" + str(link["id"]) + "'>" + en_label + "</a></div>"
       end
     end
 
