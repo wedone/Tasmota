@@ -228,11 +228,13 @@ class Cc1101Gateway
     self.save_events()
   end
 
-  def add_remote(name, group, protocol, value, bits, pulse_length, repeat, raw, note)
+  def add_remote(name, group, protocol, value, bits, pulse_length, repeat, raw, note, icon)
+    if icon == nil || icon == "" icon = "remote" end
     var remote = {
       "id": self.next_remote_id,
       "name": name,
       "group": group,
+      "icon": icon,
       "protocol": protocol,
       "value": value,
       "bits": bits,

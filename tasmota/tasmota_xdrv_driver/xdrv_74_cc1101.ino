@@ -10,13 +10,6 @@
 extern TasmotaWebServer *Webserver;
 extern void WebServer_on(const char * prefix, void (*func)(void), uint8_t method);
 extern void WebServer_removeRoute(const char * prefix, uint8_t method);
-
-static void CC1101HandleRoot(void) {
-  if (Webserver != nullptr) {
-    Webserver->sendHeader(F("Location"), F("/app/rf"));
-    Webserver->send(302, F("text/plain"), F(""));
-  }
-}
 #endif  // USE_WEBSERVER
 
 #define CC1101_GDO0_DEFAULT     4
@@ -428,9 +421,7 @@ bool Xdrv74(uint32_t function) {
       break;
 #ifdef USE_WEBSERVER
     case FUNC_WEB_ADD_HANDLER:
-      // 覆盖默认首页：App 风格 433 Gateway 界面
-      WebServer_removeRoute("/", HTTP_ANY);
-      WebServer_on("/", CC1101HandleRoot, HTTP_ANY);
+      // 保留 Tasmota 原生首页；APP UI 入口由 cc1101_webapp.be 的 web_add_main_button 提供
       break;
 #endif  // USE_WEBSERVER
   }

@@ -6,42 +6,129 @@ class Cc1101WebApp
   def init()
   end
 
+  def ic(name)
+    var path = ""
+    if name == "gear"
+      path = "M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.31-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"
+    elif name == "back"
+      path = "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"
+    elif name == "chev"
+      path = "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"
+    elif name == "remote"
+      path = "M12 1c-3 0-5.73 1.16-7.78 3.05l1.42 1.42A8.97 8.97 0 0 1 12 3c2.49 0 4.73.99 6.36 2.47l1.42-1.42A8.97 8.97 0 0 0 12 1zm4.24 8.1a5 5 0 0 0-8.48 0L9.2 10.5a2.97 2.97 0 0 1 5.6 0l1.44-1.4zM12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 2a7 7 0 0 0 2.05 4.95l1.42-1.42A5 5 0 0 1 7 12c0-1.28.48-2.5 1.35-3.4L6.93 7.18A7 7 0 0 0 5 12zm14 0a7 7 0 0 0-2.05-4.95l-1.42 1.42A5 5 0 0 1 19 12a5 5 0 0 1-1.35 3.4l1.42 1.42A7 7 0 0 0 21 12z"
+    elif name == "play"
+      path = "M8 5v14l11-7z"
+    elif name == "door"
+      path = "M6 2h8a2 2 0 0 1 2 2v2h2a2 2 0 0 1 2 2v14l-6-2-6 2V4a2 2 0 0 1 2-2zm8 4V4H6v16l4-1.33V6h4zm-4 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"
+    elif name == "event"
+      path = "M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"
+    elif name == "antenna"
+      path = "M12 5a9 9 0 0 0-6.36 2.64l1.42 1.42A7 7 0 0 1 12 7c1.94 0 3.7.79 4.95 2.05l1.42-1.42A9 9 0 0 0 12 5zm0 4a5 5 0 0 0-3.54 1.46l1.42 1.42A3 3 0 0 1 12 11c.83 0 1.58.33 2.12.88l1.42-1.42A5 5 0 0 0 12 9zm-4.8 8.2L12 22l4.8-4.8a6.78 6.78 0 0 0-9.6 0zM12 11a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"
+    elif name == "plus"
+      path = "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"
+    elif name == "power"
+      path = "M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42A6.92 6.92 0 0 1 19 12c0 3.87-3.13 7-7 7A6.995 6.995 0 0 1 7.58 6.58L6.17 5.17A8.932 8.932 0 0 0 3 12a9 9 0 0 0 18 0c0-2.62-1.12-4.97-2.17-6.83z"
+    elif name == "light"
+      path = "M12 2C8.13 2 5 5.13 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.87-3.13-7-7-7zM9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1z"
+    elif name == "lock"
+      path = "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM9 8V6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9z"
+    elif name == "star"
+      path = "M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+    end
+    return "<svg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path d='" + path + "' fill='currentColor'/></svg>"
+  end
+
+  def icon_html(val)
+    import webserver
+    var keys = ["gear","back","chev","remote","play","door","event","antenna","plus","power","light","lock","star"]
+    var i = 0
+    while i < size(keys)
+      if keys[i] == val
+        return self.ic(val)
+      end
+      i += 1
+    end
+    return webserver.html_escape(val)
+  end
+
+  def icon_picker_html(selected)
+    var opts = [["remote","遥控"],["antenna","信号"],["power","电源"],["light","灯光"],["door","门窗"],["play","播放"],["event","事件"],["gear","设置"],["lock","锁定"],["star","收藏"]]
+    var html = "<div class='iconpick'>"
+    for o : opts
+      var key = o[0]
+      var cls = ""
+      var checked = ""
+      if key == selected
+        cls = " on"
+        checked = " checked"
+      end
+      html += "<label class='ipick" + cls + "'><input type='radio' name='icon' value='" + key + "'" + checked + "><span class='ic'>" + self.ic(key) + "</span><span class='nm'>" + o[1] + "</span></label>"
+    end
+    html += "</div>"
+    return html
+  end
+
+  def icon_key(val)
+    var keys = ["gear","back","chev","remote","play","door","event","antenna","plus","power","light","lock","star"]
+    var i = 0
+    while i < size(keys)
+      if keys[i] == val
+        return val
+      end
+      i += 1
+    end
+    return "remote"
+  end
+
+  def icon_picker_js()
+    return "document.querySelectorAll('.ipick').forEach(function(l){l.addEventListener('click',function(){document.querySelectorAll('.ipick').forEach(function(x){x.classList.remove('on')});l.classList.add('on')})});"
+  end
+
   def app_page(title, active_tab, content_html)
     var html = "<!DOCTYPE html><html><head><meta charset='utf-8'>"
-    html += "<meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no'>"
+    html += "<meta name='viewport' content='width=device-width,initial-scale=1,viewport-fit=cover'>"
     html += "<title>" + title + "</title>"
     html += "<style>"
-    html += "html,body{background:#f7f7f9;font-family:-apple-system,sans-serif;margin:0;padding:0;color:#000;}"
+    html += "html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC',system-ui,sans-serif;margin:0;padding:0;color:var(--label);-webkit-font-smoothing:antialiased;}"
     html += "a{outline:none;} *{-webkit-tap-highlight-color:transparent;box-sizing:border-box;}"
-    html += ".app-hd{background:#f7f7f9;padding:14px 16px 6px;display:flex;align-items:center;justify-content:space-between;}"
-    html += ".app-hd h1{font-size:19px;margin:0;font-weight:700;}"
-    html += ".app-hd a{font-size:17px;text-decoration:none;color:#007aff;}"
-    html += ".app-body{padding:6px 14px 74px;}"
-    html += ".sect{font-size:12px;color:#8e8e93;font-weight:700;margin:12px 0 6px;}"
-    html += ".grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}"
-    html += ".grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}"
-    html += ".hkbtn{background:#fff;border-radius:16px;text-align:center;padding:14px 4px;box-shadow:0 1px 4px rgba(0,0,0,.07);cursor:pointer;text-decoration:none;color:#000;}"
-    html += ".hkbtn .ic{font-size:23px;line-height:1;} .hkbtn .nm{font-size:10px;margin-top:5px;font-weight:500;}"
-    html += ".sqcell{text-align:center;text-decoration:none;color:#000;display:block;}"
-    html += ".sqbtn{width:48px;height:48px;margin:0 auto;background:#fff;border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;font-size:21px;}"
-    html += ".sqlbl{font-size:9px;color:#666;margin-top:4px;}"
-    html += ".card{background:#fff;border-radius:14px;padding:10px 12px;box-shadow:0 1px 3px rgba(0,0,0,.07);margin-bottom:8px;}"
-    html += ".cell{display:flex;align-items:center;gap:9px;}"
-    html += ".cell .ic{width:30px;height:30px;border-radius:9px;background:#f0f2f5;display:flex;align-items:center;justify-content:center;font-size:14px;flex:none;}"
-    html += ".cell .tx{flex:1;} .cell .t1{font-size:13px;font-weight:600;} .cell .t2{font-size:10px;color:#8e8e93;margin-top:1px;}"
-    html += ".btn{display:block;text-align:center;padding:11px;border-radius:12px;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:8px;}"
-    html += ".btn.blue{background:#007aff;color:#fff;} .btn.gray{background:#e9e9ee;color:#333;}"
-    html += ".app-tab{position:fixed;bottom:0;left:0;right:0;background:rgba(249,249,251,.97);border-top:1px solid #e5e5ea;display:flex;z-index:9;}"
-    html += ".app-tab a{flex:1;text-align:center;padding:9px 0;font-size:9.5px;color:#8e8e93;text-decoration:none;}"
-    html += ".app-tab a.on{color:#007aff;font-weight:700;}"
+    html += ":root{--bg:#f2f2f7;--card:#fff;--fill:#e5e5ea;--sep:rgba(60,60,67,.29);--label:#000;--secondary:#8e8e93;--blue:#007aff;--green:#34c759;--red:#ff3b30;}"
+    html += "@media (prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1e;--fill:#2c2c2e;--sep:rgba(255,255,255,.2);--label:#fff;--secondary:#98989f;--blue:#0a84ff;--green:#30d158;--red:#ff453a;}}"
+    html += ".app-hd{padding:18px 20px 6px;display:flex;align-items:center;justify-content:space-between;}"
+    html += ".app-hd h1{font-size:28px;margin:0;font-weight:700;letter-spacing:-.02em;}"
+    html += ".app-hd a{text-decoration:none;color:var(--blue);padding:6px;display:flex;} .app-hd a svg{width:24px;height:24px;}"
+    html += ".app-body{padding:6px 20px calc(86px + env(safe-area-inset-bottom,0px));}"
+    html += ".sect{font-size:13px;color:var(--secondary);font-weight:600;margin:20px 0 8px;letter-spacing:.02em;}"
+    html += ".grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}"
+    html += ".grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}"
+    html += ".hkbtn{background:var(--card);border-radius:20px;text-align:center;padding:22px 6px;text-decoration:none;color:var(--label);display:block;transition:transform .12s ease,opacity .12s ease;} .hkbtn:active{transform:scale(.96);opacity:.85;}"
+    html += ".hkbtn .ic{font-size:34px;line-height:1;color:var(--blue);} .hkbtn .ic svg{width:34px;height:34px;} .hkbtn .nm{font-size:12px;margin-top:8px;font-weight:500;color:var(--secondary);}"
+    html += ".sqcell{text-align:center;text-decoration:none;color:var(--label);display:block;} .sqcell:active{opacity:.6;}"
+    html += ".sqbtn{width:64px;height:64px;margin:0 auto;background:var(--fill);border-radius:18px;display:flex;align-items:center;justify-content:center;color:var(--blue);font-size:30px;line-height:1;} .sqbtn svg{width:32px;height:32px;}"
+    html += ".sqlbl{font-size:12px;color:var(--secondary);margin-top:6px;}"
+    html += ".card{background:var(--card);border-radius:14px;padding:10px 14px;margin-bottom:14px;}"
+    html += ".cell{display:flex;align-items:center;gap:12px;} .cell:active{background:var(--fill);}"
+    html += ".cell .ic{width:38px;height:38px;border-radius:11px;background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--blue);flex:none;font-size:18px;} .cell .ic svg{width:22px;height:22px;}"
+    html += ".cell .tx{flex:1;} .cell .t1{font-size:16px;} .cell .t2{font-size:13px;color:var(--secondary);margin-top:2px;}"
+    html += ".btn{display:block;text-align:center;padding:14px;border-radius:12px;font-size:16px;font-weight:500;text-decoration:none;margin-bottom:10px;} .btn:active{opacity:.7;}"
+    html += ".btn.blue{background:var(--blue);color:#fff;} .btn.gray{background:var(--fill);color:var(--blue);}"
+    html += ".list{background:var(--card);border-radius:14px;overflow:hidden;margin-bottom:14px;}"
+    html += ".row{display:flex;align-items:center;gap:14px;padding:13px 16px;text-decoration:none;color:var(--label);} .row:active{background:var(--fill);} .row + .row{border-top:1px solid var(--sep);}"
+    html += ".row .rix{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;flex:none;} .row .rix svg{width:19px;height:19px;}"
+    html += ".row .rt{flex:1;font-size:16px;} .row .chv{color:var(--secondary);font-size:15px;display:flex;} .row .chv svg{width:20px;height:20px;}"
+    html += ".app-tab{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--sep);display:flex;z-index:9;padding-bottom:env(safe-area-inset-bottom,0px);}"
+    html += ".app-tab a{flex:1;text-align:center;padding:5px 0 8px;font-size:10px;color:var(--secondary);text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:2px;} .app-tab a:active{opacity:.6;}"
+    html += ".app-tab a svg{width:24px;height:24px;} .app-tab a.on{color:var(--blue);font-weight:600;}"
+    html += ".iconpick{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}"
+    html += ".ipick{display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 4px;border-radius:12px;background:var(--fill);color:var(--blue);cursor:pointer;border:2px solid transparent;} .ipick input{display:none;} .ipick.on{background:var(--card);border-color:var(--blue);}"
+    html += ".ipick .ic{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:24px;} .ipick .ic svg{width:28px;height:28px;} .ipick .nm{font-size:11px;color:var(--secondary);}"
     html += "</style>"
     html += "</head><body>"
-    html += "<div class='app-hd'><h1>" + title + "</h1><a href='/app/manage'>⚙</a></div>"
+    html += "<div class='app-hd'><h1>" + title + "</h1><a href='/app/manage'>" + self.ic("gear") + "</a></div>"
     html += "<div class='app-body'>" + content_html + "</div>"
-    var tabs = [["/app/rf","遥控"],["/app/seq","场景"],["/app/door","门磁"],["/app/event","事件"],["/app/manage","管理"]]
+    var tabs = [["/app/rf","遥控","remote"],["/app/seq","场景","play"],["/app/door","门磁","door"],["/app/event","事件","event"],["/app/manage","管理","gear"]]
     html += "<div class='app-tab'>"
     for t : tabs
-      html += "<a href='" + t[0] + "'" + (t[1] == active_tab ? " class='on'" : "") + ">" + t[1] + "</a>"
+      html += "<a href='" + t[0] + "'" + (t[1] == active_tab ? " class='on'" : "") + ">" + self.ic(t[2]) + "<span>" + t[1] + "</span></a>"
     end
     html += "</div>"
     html += "</body></html>"
@@ -69,9 +156,9 @@ class Cc1101WebApp
       html += "<div style='display:flex;gap:10px;'>"
       for door : g.doors
         var st = door["state"]
-        var bg = st == "OPEN" ? "#fdecec" : "#eaf6ee"
-        var txt = st == "OPEN" ? "开启!" : "已关"
-        html += f"<div class='hkbtn' style='flex:1;background:{bg};'><div class='ic'>🚪</div><div class='nm'>{webserver.html_escape(door['name'])} {txt}</div></div>"
+        var bg = st == "OPEN" ? "var(--red)" : "var(--green)"
+        var txt = st == "OPEN" ? "开启" : "已关"
+        html += f"<div class='hkbtn' style='flex:1;background:{bg};color:#fff;'><div class='ic' style='color:#fff;'>{self.ic('door')}</div><div class='nm' style='color:#fff;'>{webserver.html_escape(door['name'])} · {txt}</div></div>"
       end
       html += "</div>"
     else
@@ -82,7 +169,7 @@ class Cc1101WebApp
       html += "<div class='grid3'>"
       for remote : g.remotes
         html += f"<a class='hkbtn' href='/app/rf/view?id={remote['id']}'>"
-        html += f"<div class='ic'>{webserver.html_escape(remote.find('icon','🕹'))}</div>"
+        html += f"<div class='ic'>{self.icon_html(remote.find('icon','remote'))}</div>"
         html += f"<div class='nm'>{webserver.html_escape(remote['name'])}</div></a>"
       end
       html += "</div>"
@@ -93,7 +180,11 @@ class Cc1101WebApp
     if size(g.virtual_devices) > 0
       html += "<div class='grid3'>"
       for vd : g.virtual_devices
-        html += f"<a class='hkbtn' href='/app/api/vdon?name={vd['name']}'><div class='ic'>📡</div><div class='nm'>{webserver.html_escape(vd['name'])}</div></a>"
+        var vst = vd.find("state","OFF") == "ON"
+        var vtxt = vst ? "ON" : "OFF"
+        var vbg = vst ? "var(--green)" : "var(--card)"
+        var vfg = vst ? "#fff" : "var(--label)"
+        html += f"<a class='hkbtn' style='background:{vbg};color:{vfg};' href='/app/api/vdtog?name={vd['name']}'><div class='ic' style='color:{vfg};'>{self.ic('antenna')}</div><div class='nm' style='color:{vfg};'>{webserver.html_escape(vd['name'])}<br>{vtxt}</div></a>"
       end
       html += "</div>"
     end
@@ -116,11 +207,11 @@ class Cc1101WebApp
     var btns = remote["buttons"]
     if btns == nil || size(btns) == 0
       html += f"<a class='sqcell' href='/app/api/send?rid={remote['id']}'>"
-      html += f"<div class='sqbtn'>{webserver.html_escape(remote.find('icon','🕹'))}</div><div class='sqlbl'>{webserver.html_escape(remote['name'])}</div></a>"
+      html += f"<div class='sqbtn'>{self.icon_html(remote.find('icon','remote'))}</div><div class='sqlbl'>{webserver.html_escape(remote['name'])}</div></a>"
     else
       for b : btns
         html += f"<a class='sqcell' href='/app/api/send?rid={remote['id']}&bid={b['id']}'>"
-        html += f"<div class='sqbtn'>{webserver.html_escape(b['icon'])}</div><div class='sqlbl'>{webserver.html_escape(b['name'])}</div></a>"
+        html += f"<div class='sqbtn'>{self.icon_html(b.find('icon','remote'))}</div><div class='sqlbl'>{webserver.html_escape(b['name'])}</div></a>"
       end
     end
     html += "</div></div>"
@@ -137,7 +228,7 @@ class Cc1101WebApp
       for seq : g.sequences
         var n = size(seq["steps"])
         html += "<div class='card cell'>"
-        html += f"<div class='ic'>🎬</div><div class='tx'><div class='t1'>{webserver.html_escape(seq['name'])}</div><div class='t2'>{n} 步</div></div>"
+        html += f"<div class='ic'>{self.ic('play')}</div><div class='tx'><div class='t1'>{webserver.html_escape(seq['name'])}</div><div class='t2'>{n} 步</div></div>"
         html += f"<a class='btn blue' style='padding:8px 13px;font-size:11px;margin:0;' href='/app/api/seqrun?name={seq['name']}'>▶</a>"
         html += f"<a class='btn gray' style='padding:8px 13px;font-size:11px;margin:0;' href='/app/seq/edit?name={seq['name']}'>✎</a>"
         html += "</div>"
@@ -158,7 +249,11 @@ class Cc1101WebApp
     if webserver.has_arg("save")
       var steps = json.load(webserver.arg("steps"))
       var seqname = webserver.arg("seqname")
+      if seqname == nil || seqname == "" seqname = "新场景" end
       g._upsert_sequence(seqname, steps)
+      if name != "new" && name != seqname
+        g._delete_sequence(name)
+      end
       webserver.redirect("/app/seq")
       return
     end
@@ -171,31 +266,37 @@ class Cc1101WebApp
         end
       end
     end
+    var edit_name = ""
+    if name != "new"
+      edit_name = name
+    end
     var html = ""
     html += "<a href='/app/seq' style='text-decoration:none;color:#007aff;font-size:13px;'>‹ 场景</a>"
     html += "<div class='sect'>" + webserver.html_escape(name == "new" ? "新建场景" : name) + "</div>"
-    html += "<div class='card'><div id='steps'></div>"
-    html += "<button class='btn gray' onclick='addDelay()' style='width:100%;'>＋ 延时 1000ms</button>"
-    html += "</div>"
+    html += "<div class='sect'>场景名称</div>"
+    html += "<div class='card'><input id='seqname' value='" + webserver.html_escape(edit_name) + "' placeholder='输入场景名称' style='width:100%;border:none;font-size:16px;background:transparent;'></div>"
+    html += "<div class='sect'>动作序列</div>"
+    html += "<div class='card'><div id='steps'></div></div>"
+    html += "<div class='card' style='display:flex;gap:8px;align-items:center;'><input id='delayms' type='number' value='1000' style='flex:1;border:none;font-size:14px;background:transparent;'><button class='btn gray' onclick='addDelay()' style='margin:0;padding:8px 12px;font-size:13px;'>＋ 延时</button></div>"
     html += "<div class='sect'>添加发送遥控</div>"
     html += "<div class='grid3' id='remotes'></div>"
     if size(g.remotes) == 0
       html += "<div class='card' style='color:#8e8e93;font-size:12px;'>暂无遥控，请先录制遥控</div>"
     end
-    html += "<a class='btn blue' id='savebtn'>保存</a>"
+    html += "<button class='btn blue' onclick='saveSeq()'>保存</button>"
     var remotes = []
     for r : g.remotes
-      remotes.push({"id": r["id"], "name": r["name"], "icon": r.find("icon", "🕹")})
+      remotes.push({"id": r["id"], "name": r["name"], "icon": self.icon_html(r.find("icon", "remote"))})
     end
     html += "<script>var STEPS=" + (seq != nil ? json.dump(seq["steps"]) : "[]") + ";"
     html += "var REMOTES=" + json.dump(remotes) + ";"
     html += "function rname(id){var r=REMOTES.find(function(x){return x.id==id});return r?r.name:('遥控#'+id)}"
-    html += "function render(){var h='';STEPS.forEach(function(s,i){if(s.type=='send'){h+='<div style=\"padding:6px 0;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;\"><span style=\"flex:1;\">📡 '+rname(s.remote_id)+(s.button_id!==undefined?' ·按钮'+s.button_id:'')+'</span><span onclick=\"STEPS.splice('+i+',1);render()\" style=\"color:#d33;padding:4px;\">✕</span></div>'}else{h+='<div style=\"padding:6px 0;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;\"><span style=\"flex:1;\">⏱ 延时 '+s.ms+'ms</span><span onclick=\"STEPS.splice('+i+',1);render()\" style=\"color:#d33;padding:4px;\">✕</span></div>'}});document.getElementById('steps').innerHTML=h}"
+    html += "function render(){var h='';STEPS.forEach(function(s,i){if(s.type=='send'){h+='<div style=\"padding:6px 0;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;\"><span style=\"flex:1;\">📡 '+rname(s.remote_id)+(s.button_id!==undefined?' ·按钮'+s.button_id:'')+'</span><span onclick=\"STEPS.splice('+i+',1);render()\" style=\"color:var(--red);padding:4px;\">✕</span></div>'}else{h+='<div style=\"padding:6px 0;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;\"><span style=\"flex:1;\">⏱ <input type=\"number\" value=\"'+s.ms+'\" onchange=\"STEPS['+i+'].ms=parseInt(this.value)||1000\" style=\"width:110px;border:1px solid #e5e5ea;border-radius:8px;padding:4px 6px;font-size:13px;background:transparent;\"> ms</span><span onclick=\"STEPS.splice('+i+',1);render()\" style=\"color:var(--red);padding:4px;\">✕</span></div>'}});document.getElementById('steps').innerHTML=h}"
     html += "function addSend(rid){STEPS.push({type:'send',remote_id:rid});render()}"
-    html += "function addDelay(){STEPS.push({type:'delay',ms:1000});render()}"
+    html += "function addDelay(){var ms=parseInt(document.getElementById('delayms').value)||1000;STEPS.push({type:'delay',ms:ms});render()}"
+    html += "function saveSeq(){location.href='/app/seq/edit?save=1&seqname='+encodeURIComponent(document.getElementById('seqname').value||'新场景')+'&steps='+encodeURIComponent(JSON.stringify(STEPS));}"
     html += "render();"
     html += "var rh='';REMOTES.forEach(function(r){rh+='<a class=\"hkbtn\" style=\"padding:10px 4px;\" onclick=\"addSend('+r.id+')\"><div class=\"ic\">'+(r.icon||'🕹')+'</div><div class=\"nm\">'+r.name+'</div></a>'});document.getElementById('remotes').innerHTML=rh;"
-    html += "document.getElementById('savebtn').href='/app/seq/edit?save=1&seqname='+encodeURIComponent('" + webserver.html_escape(name) + "')+'&steps='+encodeURIComponent(JSON.stringify(STEPS));"
     html += "</script>"
     self.app_send_page("编辑场景", "场景", html)
   end
@@ -208,11 +309,11 @@ class Cc1101WebApp
     if size(g.doors) > 0
       for door : g.doors
         var st = door["state"]
-        var color = st == "OPEN" ? "#d33" : "#2e9e5b"
-        var txt = st == "OPEN" ? "开启!" : "已关"
+        var color = st == "OPEN" ? "var(--red)" : "var(--green)"
+        var txt = st == "OPEN" ? "开启" : "已关"
         html += "<div class='card cell'>"
-        html += f"<div class='ic'>🚪</div><div class='tx'><div class='t1'>{webserver.html_escape(door['name'])}</div><div class='t2'>最后变更 {door.find('last_event_at','-')}</div></div>"
-        html += f"<span style='font-size:13px;font-weight:700;color:{color};'>{txt}</span></div>"
+        html += f"<div class='ic'>{self.ic('door')}</div><div class='tx'><div class='t1'>{webserver.html_escape(door['name'])}</div><div class='t2'>最后变更 {door.find('last_event_at','-')}</div></div>"
+        html += f"<span style='font-size:15px;font-weight:600;color:{color};'>{txt}</span></div>"
       end
     else
       html += "<div class='card' style='color:#8e8e93;font-size:12px;'>暂无门磁</div>"
@@ -246,13 +347,17 @@ class Cc1101WebApp
     import webserver
     var html = ""
     html += "<div class='sect'>433 管理</div>"
-    html += "<a class='btn gray' href='/app/rf/manage'>🕹 遥控管理（录制/编辑）</a>"
-    html += "<a class='btn gray' href='/app/door/manage'>🚪 门磁管理</a>"
-    html += "<a class='btn gray' href='/app/link'>🔗 联动规则</a>"
-    html += "<a class='btn gray' href='/app/vdev'>📡 虚拟设备</a>"
-    html += "<a class='btn gray' href='/app/rf/record'>🎙 录制遥控</a>"
+    html += "<div class='list'>"
+    html += "<a class='row' href='/app/rf/manage'><span class='rix' style='background:#007aff;'>" + self.ic("remote") + "</span><span class='rt'>遥控管理（录制/编辑）</span><span class='chv'>" + self.ic("chev") + "</span></a>"
+    html += "<a class='row' href='/app/door/manage'><span class='rix' style='background:#34c759;'>" + self.ic("door") + "</span><span class='rt'>门磁管理</span><span class='chv'>" + self.ic("chev") + "</span></a>"
+    html += "<a class='row' href='/app/link'><span class='rix' style='background:#ff9500;'>" + self.ic("antenna") + "</span><span class='rt'>联动规则</span><span class='chv'>" + self.ic("chev") + "</span></a>"
+    html += "<a class='row' href='/app/vdev'><span class='rix' style='background:#af52de;'>" + self.ic("antenna") + "</span><span class='rt'>虚拟设备</span><span class='chv'>" + self.ic("chev") + "</span></a>"
+    html += "<a class='row' href='/app/rf/record'><span class='rix' style='background:#ff2d55;'>" + self.ic("plus") + "</span><span class='rt'>录制遥控</span><span class='chv'>" + self.ic("chev") + "</span></a>"
+    html += "</div>"
     html += "<div class='sect'>系统</div>"
-    html += "<a class='btn gray' href='/cs'>🔐 Tasmota 系统设置</a>"
+    html += "<div class='list'>"
+    html += "<a class='row' href='/'><span class='rix' style='background:#8e8e93;'>" + self.ic("gear") + "</span><span class='rt'>Tasmota 主菜单</span><span class='chv'>" + self.ic("chev") + "</span></a>"
+    html += "</div>"
     self.app_send_page("管理", "管理", html)
   end
 
@@ -264,7 +369,7 @@ class Cc1101WebApp
     if size(g.virtual_devices) > 0
       for vd : g.virtual_devices
         html += "<div class='card cell'>"
-        html += f"<div class='ic'>📡</div><div class='tx'><div class='t1'>{webserver.html_escape(vd['name'])}</div>"
+        html += f"<div class='ic'>{self.ic('antenna')}</div><div class='tx'><div class='t1'>{webserver.html_escape(vd['name'])}</div>"
         html += f"<div class='t2'>开:{webserver.html_escape(vd['on_sequence'])} · 关:{webserver.html_escape(vd['off_sequence'])} · {vd['state']}</div></div>"
         html += f"<a class='btn gray' style='padding:8px 12px;font-size:11px;margin:0;' href='/app/vdev/edit?name={webserver.html_escape(vd['name'])}'>✎</a></div>"
       end
@@ -343,15 +448,17 @@ class Cc1101WebApp
       var pulse = int(webserver.arg("pulse_length"))
       var repeat = int(webserver.arg("repeat"))
       var note = webserver.arg("note")
+      var icon = webserver.arg("icon")
       if value == nil value = 0 end
       if bits == nil bits = 0 end
       if protocol == nil protocol = 0 end
       if repeat == nil repeat = 10 end
       if note == nil note = "" end
       if group == nil group = "" end
+      if icon == nil || icon == "" icon = "remote" end
       if name != "" && value > 0
-        g.add_remote(name, group, protocol, value, bits, pulse, repeat, nil, note)
-        html += "<div class='card' style='text-align:center;color:#2e9e5b;font-weight:600;'>遥控已保存</div>"
+        g.add_remote(name, group, protocol, value, bits, pulse, repeat, nil, note, icon)
+        html += "<div class='card' style='text-align:center;color:var(--green);font-weight:600;'>遥控已保存</div>"
         html += "<script>setTimeout(function(){window.location.href='/app/rf/manage';},1000);</script>"
         self.app_send_page("录制遥控", "管理", html)
         return
@@ -362,7 +469,7 @@ class Cc1101WebApp
     if webserver.has_arg("stop")
       g.learn_mode = false
       g.learn_result = nil
-      html += "<div class='card' style='text-align:center;color:#d33;font-weight:600;'>录制已停止</div>"
+      html += "<div class='card' style='text-align:center;color:var(--red);font-weight:600;'>录制已停止</div>"
       html += "<a class='btn blue' href='/app/rf/record'>重新录制</a>"
       self.app_send_page("录制遥控", "管理", html)
       return
@@ -429,6 +536,9 @@ class Cc1101WebApp
       html += "<div class='card'><input id='repeat' name='repeat' type='number' value='10' style='width:100%;border:none;font-size:14px;background:transparent;'></div>"
       html += "<div class='sect'>备注</div>"
       html += "<div class='card'><input id='note' name='note' placeholder='可选' style='width:100%;border:none;font-size:14px;background:transparent;'></div>"
+      html += "<div class='sect'>按钮图标</div>"
+      html += "<div class='card'>" + self.icon_picker_html("remote") + "</div>"
+      html += "<script>" + self.icon_picker_js() + "</script>"
       html += "<button class='btn blue' type='submit'>保存遥控</button>"
       html += "</form>"
       self.app_send_page("录制遥控", "管理", html)
@@ -463,6 +573,7 @@ class Cc1101WebApp
       var pulse = int(webserver.arg("pulse_length"))
       var repeat = int(webserver.arg("repeat"))
       var note = webserver.arg("note")
+      var icon = webserver.arg("icon")
       if name == nil name = "" end
       if group == nil group = "" end
       if note == nil note = "" end
@@ -471,8 +582,9 @@ class Cc1101WebApp
       if bits == nil bits = 24 end
       if pulse == nil pulse = 0 end
       if repeat == nil repeat = 10 end
-      g.update_remote(id, {"name": name, "group": group, "protocol": protocol, "value": value, "bits": bits, "pulse_length": pulse, "repeat": repeat, "note": note})
-      html += "<div class='card' style='text-align:center;color:#2e9e5b;font-weight:600;'>已保存</div>"
+      if icon == nil || icon == "" icon = "remote" end
+      g.update_remote(id, {"name": name, "group": group, "icon": icon, "protocol": protocol, "value": value, "bits": bits, "pulse_length": pulse, "repeat": repeat, "note": note})
+      html += "<div class='card' style='text-align:center;color:var(--green);font-weight:600;'>已保存</div>"
       html += "<script>setTimeout(function(){window.location.href='/app/rf/manage';},1000);</script>"
       self.app_send_page("编辑遥控", "管理", html)
       return
@@ -480,7 +592,7 @@ class Cc1101WebApp
 
     var remote = g.find_remote(id)
     if remote == nil
-      html += "<div class='card' style='text-align:center;color:#d33;'>遥控不存在</div>"
+      html += "<div class='card' style='text-align:center;color:var(--red);'>遥控不存在</div>"
       self.app_send_page("编辑遥控", "管理", html)
       return
     end
@@ -504,6 +616,9 @@ class Cc1101WebApp
     html += f"<div class='card'><input name='repeat' type='number' value='{remote['repeat']}' style='width:100%;border:none;font-size:14px;background:transparent;'></div>"
     html += "<div class='sect'>备注</div>"
     html += f"<div class='card'><input name='note' value='{webserver.html_escape(remote['note'])}' style='width:100%;border:none;font-size:14px;background:transparent;'></div>"
+    html += "<div class='sect'>按钮图标</div>"
+    html += "<div class='card'>" + self.icon_picker_html(self.icon_key(remote.find("icon","remote"))) + "</div>"
+    html += "<script>" + self.icon_picker_js() + "</script>"
     html += "<button class='btn blue' type='submit'>保存</button>"
     html += "</form>"
     html += f"<a class='btn gray' href='/app/rf/view?id={id}'>测试发送</a>"
@@ -538,7 +653,7 @@ class Cc1101WebApp
       if matched
         count += 1
         html += "<div class='card cell'>"
-        html += f"<div class='ic'>{webserver.html_escape(remote.find('icon','🕹'))}</div>"
+        html += f"<div class='ic'>{self.icon_html(remote.find('icon','remote'))}</div>"
         html += f"<div class='tx'><div class='t1'>{webserver.html_escape(remote['name'])}</div>"
         html += f"<div class='t2'>P{remote['protocol']} · {remote['bits']}bit · {remote['group']}</div></div>"
         html += f"<a class='btn blue' style='padding:8px 12px;font-size:11px;margin:0;' href='/app/rf/view?id={remote['id']}'>发送</a>"
@@ -573,9 +688,9 @@ class Cc1101WebApp
     else
       for door : g.doors
         var st = door["state"]
-        var color = st == "OPEN" ? "#d33" : "#2e9e5b"
+        var color = st == "OPEN" ? "var(--red)" : "var(--green)"
         html += "<div class='card cell'>"
-        html += f"<div class='ic'>🚪</div>"
+        html += f"<div class='ic'>{self.ic('door')}</div>"
         html += f"<div class='tx'><div class='t1'>{webserver.html_escape(door['name'])}</div>"
         html += f"<div class='t2'>{webserver.html_escape(door['location'])} · {door['code']}</div></div>"
         html += f"<span style='font-size:12px;font-weight:700;color:{color};'>{st}</span>"
@@ -652,7 +767,7 @@ class Cc1101WebApp
       elif name != "" && code > 0
         g.add_door(name, location, code, bits, 1, note)
       end
-      html += "<div class='card' style='text-align:center;color:#2e9e5b;font-weight:600;'>已保存</div>"
+      html += "<div class='card' style='text-align:center;color:var(--green);font-weight:600;'>已保存</div>"
       html += "<script>setTimeout(function(){window.location.href='/app/door/manage';},1000);</script>"
       self.app_send_page("编辑门磁", "管理", html)
       return
@@ -811,7 +926,7 @@ class Cc1101WebApp
       html += "<button class='btn blue' type='submit'>添加规则</button>"
       html += "</form>"
     else
-      html += "<div class='card' style='color:#d33;font-size:12px;'>需先添加至少一个门磁和一个遥控</div>"
+      html += "<div class='card' style='color:var(--red);font-size:12px;'>需先添加至少一个门磁和一个遥控</div>"
     end
     self.app_send_page("联动规则", "管理", html)
   end
@@ -846,7 +961,7 @@ class Cc1101WebApp
         g.virtual_devices.push({"name": new_name, "on_sequence": on_seq, "off_sequence": off_seq, "state": "OFF"})
       end
       g.save_virtual_devices()
-      html += "<div class='card' style='text-align:center;color:#2e9e5b;font-weight:600;'>已保存</div>"
+      html += "<div class='card' style='text-align:center;color:var(--green);font-weight:600;'>已保存</div>"
       html += "<script>setTimeout(function(){window.location.href='/app/vdev';},1000);</script>"
       self.app_send_page("编辑虚拟设备", "管理", html)
       return
@@ -890,6 +1005,29 @@ class Cc1101WebApp
     self.app_send_page("编辑虚拟设备", "管理", html)
   end
 
+  def handle_app_api_vdtog()
+    import webserver
+    import json
+    var g = gateway
+    var name = webserver.arg("name")
+    for vd : g.virtual_devices
+      if vd["name"] == name
+        if vd.find("state","OFF") == "ON"
+          vd["state"] = "OFF"
+          g.save_virtual_devices()
+          g.seq_run_by_name(vd["off_sequence"])
+        else
+          vd["state"] = "ON"
+          g.save_virtual_devices()
+          g.seq_run_by_name(vd["on_sequence"])
+        end
+        g.publish_vdevice_state(vd)
+        break
+      end
+    end
+    webserver.redirect("/app/rf")
+  end
+
   def web_add_main_button()
     import webserver
     # 在 Tasmota 原生主页添加「433 Gateway App」独立按钮，跳转 APP UI
@@ -917,6 +1055,7 @@ class Cc1101WebApp
     webserver.on("/app/api/send", / -> self.handle_app_api_send())
     webserver.on("/app/api/seqrun", / -> self.handle_app_api_seqrun())
     webserver.on("/app/api/vdon", / -> self.handle_app_api_vdon())
+    webserver.on("/app/api/vdtog", / -> self.handle_app_api_vdtog())
     webserver.on("/app/api/rf/event", / -> self.handle_app_api_rf_event())
     webserver.on("/app/api/rf/delete", / -> self.handle_app_api_rf_delete())
     webserver.on("/app/api/door/delete", / -> self.handle_app_api_door_delete())
