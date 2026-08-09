@@ -5,6 +5,20 @@
 #include <SPI.h>
 #include <RCSwitch.h>
 
+#ifdef USE_WEBSERVER
+#include <TasmotaWebServer.h>
+extern TasmotaWebServer *Webserver;
+extern void WebServer_on(const char * prefix, void (*func)(void), uint8_t method);
+extern void WebServer_removeRoute(const char * prefix, uint8_t method);
+
+static void CC1101HandleRoot(void) {
+  if (Webserver != nullptr) {
+    Webserver->sendHeader(F("Location"), F("/app/rf"));
+    Webserver->send(302, F("text/plain"), F(""));
+  }
+}
+#endif  // USE_WEBSERVER
+
 #define CC1101_GDO0_DEFAULT     4
 #define CC1101_CS_DEFAULT       5
 #define CC1101_SCK          18
@@ -412,6 +426,13 @@ bool Xdrv74(uint32_t function) {
     case FUNC_ACTIVE:
       result = cc1101_status.initialized;
       break;
+#ifdef USE_WEBSERVER
+    case FUNC_WEB_ADD_HANDLER:
+      // 覆盖默认首页：App 风格 433 Gateway 界面
+      WebServer_removeRoute("/", HTTP_ANY);
+      WebServer_on("/", CC1101HandleRoot, HTTP_ANY);
+      break;
+#endif  // USE_WEBSERVER
   }
 
   return result;

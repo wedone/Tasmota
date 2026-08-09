@@ -161,6 +161,7 @@ class Cc1101Gateway
   def _load_events()
     import path
     import json
+    import string
 
     if !path.exists(self._FILE_EVENTS)
       return
@@ -181,9 +182,9 @@ class Cc1101Gateway
     end
 
     self.events = []
-    var lines = str(content).split("\n")
+    var lines = string.split(str(content), "\n")
     for line : lines
-      line = line.trim()
+      line = string.replace(line, "\r", "")
       if line != ""
         var evt = json.load(line)
         if evt != nil
@@ -1102,6 +1103,7 @@ class Cc1101Gateway
 
   def handle_rf_page()
     import webserver
+    import string
     webserver.content_start("433 Gateway - Remotes")
     webserver.content_send_style()
     var html = ""
@@ -1136,8 +1138,8 @@ class Cc1101Gateway
     var count = 0
     for remote : self.remotes
       if search != ""
-        var lower = str(search).lower()
-        if str(remote["name"]).lower().find(lower) == nil && str(remote["group"]).lower().find(lower) == nil
+        var lower = string.tolower(str(search))
+        if string.find(string.tolower(str(remote["name"])), lower) < 0 && string.find(string.tolower(str(remote["group"])), lower) < 0
           # skip
         else
           count += 1
@@ -1649,20 +1651,21 @@ class Cc1101Gateway
 
   def mqtt_data(topic, idx, data, databytes)
     import json
+    import string
     var dev = self._get_device_name()
     var prefix = "cmnd/" + dev + "/rf_vdevice/"
     if topic.find(prefix) == 0
       var name = topic[size(prefix) .. ]
       for vd : self.virtual_devices
         if vd["name"] == name
-          var payload = str(data).upper()
-          if payload.find("ON") != nil
+          var payload = string.toupper(str(data))
+          if string.find(payload, "ON") >= 0
             vd["state"] = "ON"
             self.save_virtual_devices()
             self.seq_run_by_name(vd["on_sequence"])
             self.publish_vdevice_state(vd)
             return true
-          elif payload.find("OFF") != nil
+          elif string.find(payload, "OFF") >= 0
             vd["state"] = "OFF"
             self.save_virtual_devices()
             self.seq_run_by_name(vd["off_sequence"])
