@@ -176,16 +176,26 @@ class Cc1101WebApp
     html += "<a href='/app/seq' style='text-decoration:none;color:#007aff;font-size:13px;'>‹ 场景</a>"
     html += "<div class='sect'>" + webserver.html_escape(name == "new" ? "新建场景" : name) + "</div>"
     html += "<div class='card'><div id='steps'></div>"
-    html += "<button class='btn gray' onclick='addSend()' style='width:100%;margin-bottom:6px;'>＋ 发送遥控</button>"
-    html += "<button class='btn gray' onclick='addDelay()' style='width:100%;margin-bottom:6px;'>＋ 延时</button>"
+    html += "<button class='btn gray' onclick='addDelay()' style='width:100%;'>＋ 延时 1000ms</button>"
     html += "</div>"
+    html += "<div class='sect'>添加发送遥控</div>"
+    html += "<div class='grid3' id='remotes'></div>"
+    if size(g.remotes) == 0
+      html += "<div class='card' style='color:#8e8e93;font-size:12px;'>暂无遥控，请先录制遥控</div>"
+    end
     html += "<a class='btn blue' id='savebtn'>保存</a>"
+    var remotes = []
+    for r : g.remotes
+      remotes.push({"id": r["id"], "name": r["name"], "icon": r.find("icon", "🕹")})
+    end
     html += "<script>var STEPS=" + (seq != nil ? json.dump(seq["steps"]) : "[]") + ";"
-    html += "function esc(s){return s}"
-    html += "function render(){var h='';STEPS.forEach(function(s,i){if(s.type=='send'){h+='<div style=\"padding:6px 0;border-bottom:1px solid #f2f2f7;display:flex;\"><span style=\"flex:1;\">📡 遥控#'+s.remote_id+(s.button_id!==undefined?' ·按钮'+s.button_id:'')+'</span><span onclick=\"STEPS.splice('+i+',1);render()\" style=\"color:#d33;\">✕</span></div>'}else{h+='<div style=\"padding:6px 0;border-bottom:1px solid #f2f2f7;display:flex;\"><span style=\"flex:1;\">⏱ 延时 '+s.ms+'ms</span><span onclick=\"STEPS.splice('+i+',1);render()\" style=\"color:#d33;\">✕</span></div>'}});document.getElementById('steps').innerHTML=h}"
-    html += "function addSend(){STEPS.push({type:'send',remote_id:1});render()}"
+    html += "var REMOTES=" + json.dump(remotes) + ";"
+    html += "function rname(id){var r=REMOTES.find(function(x){return x.id==id});return r?r.name:('遥控#'+id)}"
+    html += "function render(){var h='';STEPS.forEach(function(s,i){if(s.type=='send'){h+='<div style=\"padding:6px 0;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;\"><span style=\"flex:1;\">📡 '+rname(s.remote_id)+(s.button_id!==undefined?' ·按钮'+s.button_id:'')+'</span><span onclick=\"STEPS.splice('+i+',1);render()\" style=\"color:#d33;padding:4px;\">✕</span></div>'}else{h+='<div style=\"padding:6px 0;border-bottom:1px solid #f2f2f7;display:flex;align-items:center;\"><span style=\"flex:1;\">⏱ 延时 '+s.ms+'ms</span><span onclick=\"STEPS.splice('+i+',1);render()\" style=\"color:#d33;padding:4px;\">✕</span></div>'}});document.getElementById('steps').innerHTML=h}"
+    html += "function addSend(rid){STEPS.push({type:'send',remote_id:rid});render()}"
     html += "function addDelay(){STEPS.push({type:'delay',ms:1000});render()}"
     html += "render();"
+    html += "var rh='';REMOTES.forEach(function(r){rh+='<a class=\"hkbtn\" style=\"padding:10px 4px;\" onclick=\"addSend('+r.id+')\"><div class=\"ic\">'+(r.icon||'🕹')+'</div><div class=\"nm\">'+r.name+'</div></a>'});document.getElementById('remotes').innerHTML=rh;"
     html += "document.getElementById('savebtn').href='/app/seq/edit?save=1&seqname='+encodeURIComponent('" + webserver.html_escape(name) + "')+'&steps='+encodeURIComponent(JSON.stringify(STEPS));"
     html += "</script>"
     webserver.content_start("编辑场景")
