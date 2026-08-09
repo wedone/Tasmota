@@ -7,12 +7,14 @@ class Cc1101WebApp
   end
 
   def app_page(title, active_tab, content_html)
-    import webserver
-    var html = ""
+    var html = "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+    html += "<meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no'>"
+    html += "<title>" + title + "</title>"
     html += "<style>"
-    html += "body{background:#f7f7f9;font-family:-apple-system,sans-serif;margin:0;color:#000;}"
+    html += "html,body{background:#f7f7f9;font-family:-apple-system,sans-serif;margin:0;padding:0;color:#000;}"
+    html += "a{outline:none;} *{-webkit-tap-highlight-color:transparent;box-sizing:border-box;}"
     html += ".app-hd{background:#f7f7f9;padding:14px 16px 6px;display:flex;align-items:center;justify-content:space-between;}"
-    html += ".app-hd h1{font-size:19px;margin:0;}"
+    html += ".app-hd h1{font-size:19px;margin:0;font-weight:700;}"
     html += ".app-hd a{font-size:17px;text-decoration:none;color:#007aff;}"
     html += ".app-body{padding:6px 14px 74px;}"
     html += ".sect{font-size:12px;color:#8e8e93;font-weight:700;margin:12px 0 6px;}"
@@ -29,10 +31,11 @@ class Cc1101WebApp
     html += ".cell .tx{flex:1;} .cell .t1{font-size:13px;font-weight:600;} .cell .t2{font-size:10px;color:#8e8e93;margin-top:1px;}"
     html += ".btn{display:block;text-align:center;padding:11px;border-radius:12px;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:8px;}"
     html += ".btn.blue{background:#007aff;color:#fff;} .btn.gray{background:#e9e9ee;color:#333;}"
-    html += ".app-tab{position:fixed;bottom:0;left:0;right:0;background:rgba(249,249,251,.97);border-top:1px solid #e5e5ea;display:flex;}"
+    html += ".app-tab{position:fixed;bottom:0;left:0;right:0;background:rgba(249,249,251,.97);border-top:1px solid #e5e5ea;display:flex;z-index:9;}"
     html += ".app-tab a{flex:1;text-align:center;padding:9px 0;font-size:9.5px;color:#8e8e93;text-decoration:none;}"
     html += ".app-tab a.on{color:#007aff;font-weight:700;}"
     html += "</style>"
+    html += "</head><body>"
     html += "<div class='app-hd'><h1>" + title + "</h1><a href='/app/manage'>⚙</a></div>"
     html += "<div class='app-body'>" + content_html + "</div>"
     var tabs = [["/app/rf","遥控"],["/app/seq","场景"],["/app/door","门磁"],["/app/event","事件"],["/app/manage","管理"]]
@@ -41,7 +44,15 @@ class Cc1101WebApp
       html += "<a href='" + t[0] + "'" + (t[1] == active_tab ? " class='on'" : "") + ">" + t[1] + "</a>"
     end
     html += "</div>"
-    webserver.content_send(html)
+    html += "</body></html>"
+    return html
+  end
+
+  def app_send_page(title, active_tab, content_html)
+    import webserver
+    webserver.content_open(200, "text/html")
+    webserver.content_send(self.app_page(title, active_tab, content_html))
+    webserver.content_close()
   end
 
   def handle_app_page_root()
@@ -86,10 +97,7 @@ class Cc1101WebApp
       end
       html += "</div>"
     end
-    webserver.content_start("433 Gateway")
-    webserver.content_send_style()
-    self.app_page("433 Gateway", "遥控", html)
-    webserver.content_stop()
+    self.app_send_page("433 Gateway", "遥控", html)
   end
 
   def handle_app_rf_view_page()
@@ -98,10 +106,7 @@ class Cc1101WebApp
     var id = int(webserver.arg("id"))
     var remote = g.find_remote(id)
     if remote == nil
-      webserver.content_start("遥控")
-      webserver.content_send_style()
-      self.app_page("遥控", "遥控", "<div class='card'>遥控不存在</div>")
-      webserver.content_stop()
+      self.app_send_page("遥控", "遥控", "<div class='card'>遥控不存在</div>")
       return
     end
     var html = ""
@@ -120,10 +125,7 @@ class Cc1101WebApp
     end
     html += "</div></div>"
     html += "<a class='btn gray' href='/rf/edit?id=" + str(remote["id"]) + "'>＋ 管理按钮</a>"
-    webserver.content_start("遥控")
-    webserver.content_send_style()
-    self.app_page(webserver.html_escape(remote["name"]), "遥控", html)
-    webserver.content_stop()
+    self.app_send_page(webserver.html_escape(remote["name"]), "遥控", html)
   end
 
   def handle_app_seq_page()
@@ -145,10 +147,7 @@ class Cc1101WebApp
     end
     html += "<a class='btn blue' href='/app/seq/edit?name=new'>＋ 新建场景</a>"
     html += "<a class='btn gray' href='/app/api/seqrun?stop=1'>■ 停止当前序列</a>"
-    webserver.content_start("场景")
-    webserver.content_send_style()
-    self.app_page("场景", "场景", html)
-    webserver.content_stop()
+    self.app_send_page("场景", "场景", html)
   end
 
   def handle_app_seq_edit_page()
@@ -198,10 +197,7 @@ class Cc1101WebApp
     html += "var rh='';REMOTES.forEach(function(r){rh+='<a class=\"hkbtn\" style=\"padding:10px 4px;\" onclick=\"addSend('+r.id+')\"><div class=\"ic\">'+(r.icon||'🕹')+'</div><div class=\"nm\">'+r.name+'</div></a>'});document.getElementById('remotes').innerHTML=rh;"
     html += "document.getElementById('savebtn').href='/app/seq/edit?save=1&seqname='+encodeURIComponent('" + webserver.html_escape(name) + "')+'&steps='+encodeURIComponent(JSON.stringify(STEPS));"
     html += "</script>"
-    webserver.content_start("编辑场景")
-    webserver.content_send_style()
-    self.app_page("编辑场景", "场景", html)
-    webserver.content_stop()
+    self.app_send_page("编辑场景", "场景", html)
   end
 
   def handle_app_door_page()
@@ -222,10 +218,7 @@ class Cc1101WebApp
       html += "<div class='card' style='color:#8e8e93;font-size:12px;'>暂无门磁</div>"
     end
     html += "<a class='btn blue' href='/rf/door/add'>＋ 添加门磁</a>"
-    webserver.content_start("门磁")
-    webserver.content_send_style()
-    self.app_page("门磁", "门磁", html)
-    webserver.content_stop()
+    self.app_send_page("门磁", "门磁", html)
   end
 
   def handle_app_event_page()
@@ -246,10 +239,7 @@ class Cc1101WebApp
       end
     end
     html += "</div>"
-    webserver.content_start("事件")
-    webserver.content_send_style()
-    self.app_page("事件", "事件", html)
-    webserver.content_stop()
+    self.app_send_page("事件", "事件", html)
   end
 
   def handle_app_manage_page()
@@ -263,10 +253,7 @@ class Cc1101WebApp
     html += "<a class='btn gray' href='/rf/record'>🎙 录制遥控</a>"
     html += "<div class='sect'>系统</div>"
     html += "<a class='btn gray' href='/cs'>🔐 Tasmota 系统设置</a>"
-    webserver.content_start("管理")
-    webserver.content_send_style()
-    self.app_page("管理", "管理", html)
-    webserver.content_stop()
+    self.app_send_page("管理", "管理", html)
   end
 
   def handle_app_vdev_page()
@@ -285,10 +272,7 @@ class Cc1101WebApp
       html += "<div class='card' style='color:#8e8e93;font-size:12px;'>暂无虚拟设备</div>"
     end
     html += "<div class='card' style='color:#666;font-size:11px;'>虚拟设备在 HA 中显示为开关，控制命令触发本地序列。</div>"
-    webserver.content_start("虚拟设备")
-    webserver.content_send_style()
-    self.app_page("虚拟设备", "管理", html)
-    webserver.content_stop()
+    self.app_send_page("虚拟设备", "管理", html)
   end
 
   def handle_app_api_send()
