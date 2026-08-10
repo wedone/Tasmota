@@ -356,7 +356,7 @@ class Cc1101WebApp
     html += "</div>"
     html += "<div class='sect'>系统</div>"
     html += "<div class='list'>"
-    html += "<a class='row' href='/'><span class='rix' style='background:#8e8e93;'>" + self.ic("gear") + "</span><span class='rt'>Tasmota 主菜单</span><span class='chv'>" + self.ic("chev") + "</span></a>"
+    html += "<a class='row' href='/mm'><span class='rix' style='background:#8e8e93;'>" + self.ic("gear") + "</span><span class='rt'>Tasmota 主菜单</span><span class='chv'>" + self.ic("chev") + "</span></a>"
     html += "</div>"
     self.app_send_page("管理", "管理", html)
   end

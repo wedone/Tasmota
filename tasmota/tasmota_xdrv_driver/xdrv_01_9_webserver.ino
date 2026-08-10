@@ -456,7 +456,7 @@ const char kButtonTitle[] PROGMEM =
   D_CONSOLE;
 const char kButtonAction[] PROGMEM =
   ".|rt|"
-  ".|cn|in|up|mn|"
+  "mm|cn|in|up|mn|"
   "md|wi|lg|co|tp|dl|rs|"
   "cs";
 const char kButtonConfirm[] PROGMEM = D_CONFIRM_RESTART "|" D_CONFIRM_RESET_CONFIGURATION;

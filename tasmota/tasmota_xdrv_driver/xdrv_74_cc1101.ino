@@ -10,6 +10,7 @@
 extern TasmotaWebServer *Webserver;
 extern void WebServer_on(const char * prefix, void (*func)(void), uint8_t method);
 extern void WebServer_removeRoute(const char * prefix, uint8_t method);
+extern void HandleRoot(void);
 #endif  // USE_WEBSERVER
 
 #define CC1101_GDO0_DEFAULT     4
@@ -401,6 +402,26 @@ void Cc1101Every50ms(void) {
   cc1101_every_50ms();
 }
 
+#ifdef USE_WEBSERVER
+static void CC1101HandleRoot(void) {
+  if (Webserver != nullptr) {
+    // 根地址默认进入 APP UI；POST 保留给 Tasmota 原生登录流程
+    if (Webserver->method() == HTTP_POST || Webserver->hasArg("USER1") || Webserver->hasArg("PASS1")) {
+      HandleRoot();
+      return;
+    }
+    Webserver->sendHeader(F("Location"), F("/app/rf"));
+    Webserver->send(302, F("text/plain"), F(""));
+  }
+}
+
+static void CC1101HandleNativeMainMenu(void) {
+  if (Webserver != nullptr) {
+    HandleRoot();
+  }
+}
+#endif  // USE_WEBSERVER
+
 bool Xdrv74(uint32_t function) {
   if (!PinUsed(GPIO_CC1101_GDO0) && !PinUsed(GPIO_CC1101_GDO2)) {
     return false;
@@ -421,7 +442,10 @@ bool Xdrv74(uint32_t function) {
       break;
 #ifdef USE_WEBSERVER
     case FUNC_WEB_ADD_HANDLER:
-      // 保留 Tasmota 原生首页；APP UI 入口由 cc1101_webapp.be 的 web_add_main_button 提供
+      // 根地址默认进入 APP UI；原生 Main Menu 迁移到 /mm，两者不再冲突
+      WebServer_removeRoute("/", HTTP_ANY);
+      WebServer_on("/", CC1101HandleRoot, HTTP_ANY);
+      WebServer_on("/mm", CC1101HandleNativeMainMenu, HTTP_ANY);
       break;
 #endif  // USE_WEBSERVER
   }
