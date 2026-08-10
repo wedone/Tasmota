@@ -6,6 +6,7 @@ class Cc1101Gateway
   var next_remote_id, next_door_id, next_link_id
   var recording, record_timeout
   var learn_mode, learn_timeout, learn_result
+  var pending_remote
   var last_event_ts
   var device_name
   var seq_running_seq, seq_running_index, seq_delay_until, seq_stop_requested
@@ -40,6 +41,7 @@ class Cc1101Gateway
     self.learn_mode = false
     self.learn_timeout = 0
     self.learn_result = nil
+    self.pending_remote = nil
     self.last_event_ts = 0
     self.device_name = ""
     self.seq_running_seq = nil
@@ -253,6 +255,40 @@ class Cc1101Gateway
     return remote
   end
 
+  def add_multi_button_remote(name, group, icon, note, buttons)
+    if icon == nil || icon == "" icon = "remote" end
+    if buttons == nil buttons = [] end
+    var value = 0
+    var bits = 24
+    var protocol = 1
+    if size(buttons) > 0
+      value = buttons[0].find("value", 0)
+      bits = buttons[0].find("bits", 24)
+      protocol = buttons[0].find("protocol", 1)
+    end
+    var remote = {
+      "id": self.next_remote_id,
+      "name": name,
+      "group": group,
+      "icon": icon,
+      "protocol": protocol,
+      "value": value,
+      "bits": bits,
+      "pulse_length": 0,
+      "repeat": 10,
+      "raw": nil,
+      "note": note,
+      "buttons": buttons,
+      "last_sent_at": 0
+    }
+    self.remotes.push(remote)
+    self.next_remote_id += 1
+    self.save_remotes()
+    self.add_event("record", {"remote_id": remote["id"], "detail": f"buttons={size(buttons)}"})
+    self.publish_ha_discovery_remote(remote)
+    return remote
+  end
+
   def send_remote_button(remote_id, button_id)
     var remote = self.find_remote(remote_id)
     if remote == nil || remote["buttons"] == nil
@@ -386,6 +422,57 @@ class Cc1101Gateway
       end
     end
     return nil
+  end
+
+  def all_devices()
+    var out = []
+    for r : self.remotes
+      var btns = r.find("buttons", [])
+      if btns == nil btns = [] end
+      out.push({
+        "kind": "remote",
+        "id": r["id"],
+        "name": r["name"],
+        "group": r.find("group", ""),
+        "icon": r.find("icon", "remote"),
+        "note": r.find("note", ""),
+        "buttons": btns,
+        "button_count": size(btns),
+        "protocol": r.find("protocol", 1),
+        "bits": r.find("bits", 0),
+        "value": r.find("value", 0),
+        "type_label": "遥控"
+      })
+    end
+    for d : self.doors
+      out.push({
+        "kind": "door",
+        "id": d["id"],
+        "name": d["name"],
+        "location": d.find("location", ""),
+        "code": d.find("code", 0),
+        "state": d.find("state", "CLOSE"),
+        "note": d.find("note", ""),
+        "type_label": "门磁",
+        "icon": "door",
+        "buttons": []
+      })
+    end
+    return out
+  end
+
+  def find_device(kind, id)
+    if kind == "door"
+      return self.find_door(id)
+    end
+    return self.find_remote(id)
+  end
+
+  def delete_device(kind, id)
+    if kind == "door"
+      return self.delete_door(id)
+    end
+    return self.delete_remote(id)
   end
 
   def find_door_by_code(code)
