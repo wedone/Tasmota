@@ -456,7 +456,11 @@ const char kButtonTitle[] PROGMEM =
   D_CONSOLE;
 const char kButtonAction[] PROGMEM =
   ".|rt|"
+#ifdef USE_CC1101_GATEWAY
   "mm|cn|in|up|mn|"
+#else
+  ".|cn|in|up|mn|"
+#endif
   "md|wi|lg|co|tp|dl|rs|"
   "cs";
 const char kButtonConfirm[] PROGMEM = D_CONFIRM_RESTART "|" D_CONFIRM_RESET_CONFIGURATION;

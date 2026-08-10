@@ -405,6 +405,11 @@ void Cc1101Every50ms(void) {
 #ifdef USE_WEBSERVER
 static void CC1101HandleRoot(void) {
   if (Webserver != nullptr) {
+    // AP/首次配置模式必须保留 Tasmota 原生引导页，否则无法进入 WiFi 配置
+    if (HTTP_MANAGER == Web.state || HTTP_MANAGER_RESET_ONLY == Web.state) {
+      HandleRoot();
+      return;
+    }
     // 根地址默认进入 APP UI；POST 保留给 Tasmota 原生登录流程
     if (Webserver->method() == HTTP_POST || Webserver->hasArg("USER1") || Webserver->hasArg("PASS1")) {
       HandleRoot();
