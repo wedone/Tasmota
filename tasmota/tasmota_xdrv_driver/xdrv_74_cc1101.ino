@@ -410,8 +410,9 @@ static void CC1101HandleRoot(void) {
       HandleRoot();
       return;
     }
-    // 根地址默认进入 APP UI；POST 保留给 Tasmota 原生登录流程
-    if (Webserver->method() == HTTP_POST || Webserver->hasArg("USER1") || Webserver->hasArg("PASS1")) {
+    // 根地址默认进入 APP UI；POST 保留给 Tasmota 原生登录流程，
+    // m 参数是原生首页的状态刷新请求，必须继续由原生 Handler 响应
+    if (Webserver->method() == HTTP_POST || Webserver->hasArg("USER1") || Webserver->hasArg("PASS1") || Webserver->hasArg(F("m"))) {
       HandleRoot();
       return;
     }
