@@ -153,8 +153,9 @@ class Cc1101WebApp
     return css
   end
 
-  def app_send_page(title, active_tab, content_html)
+  def app_send_header(title, active_tab)
     import webserver
+    tasmota.gc()
     webserver.content_open(200, "text/html")
     webserver.content_send("<!DOCTYPE html><html><head><meta charset='utf-8'>")
     webserver.content_send("<meta name='viewport' content='width=device-width,initial-scale=1,viewport-fit=cover'>")
@@ -163,17 +164,16 @@ class Cc1101WebApp
     webserver.content_send("</head><body>")
     webserver.content_send("<div class='app-hd'><h1>" + title + "</h1><a href='/app/manage'>" + self.ic("gear") + "</a></div>")
     webserver.content_send("<div class='app-body'>")
-    var chunk = 1024
-    var i = 0
-    while i < size(content_html)
-      var ep = i + chunk
-      if ep > size(content_html)
-        ep = size(content_html)
-      end
-      webserver.content_send(bytes().fromstring(content_html[i .. ep - 1]))
-      webserver.content_flush()
-      i = ep
-    end
+  end
+
+  def app_send_part(s)
+    import webserver
+    webserver.content_send(s)
+    webserver.content_flush()
+  end
+
+  def app_send_footer(active_tab)
+    import webserver
     webserver.content_send("</div>")
     var tabs = [["/app/rf","设备","remote"],["/app/seq","场景","play"],["/app/event","事件","event"],["/app/manage","管理","gear"]]
     webserver.content_send("<div class='app-tab'>")
@@ -182,6 +182,22 @@ class Cc1101WebApp
     end
     webserver.content_send("</div></body></html>")
     webserver.content_close()
+    tasmota.gc()
+  end
+
+  def app_send_page(title, active_tab, content_html)
+    self.app_send_header(title, active_tab)
+    var chunk = 512
+    var i = 0
+    while i < size(content_html)
+      var ep = i + chunk
+      if ep > size(content_html)
+        ep = size(content_html)
+      end
+      self.app_send_part(content_html[i .. ep - 1])
+      i = ep
+    end
+    self.app_send_footer(active_tab)
   end
 
   def handle_app_page_root()
@@ -199,63 +215,63 @@ class Cc1101WebApp
   def handle_app_rf_page()
     import webserver
     var g = gateway
-    var html = ""
     var devices = g.all_devices()
-    html += "<div class='sect'>设备</div>"
+    self.app_send_header("射频网关", "设备")
+    self.app_send_part("<div class='sect'>设备</div>")
     if size(devices) > 0
-      html += "<div class='grid4'>"
+      self.app_send_part("<div class='grid4'>")
       for d : devices
         if d["kind"] == "door"
           var st = d["state"]
           var bg = st == "OPEN" ? "var(--red)" : "var(--green)"
           var txt = st == "OPEN" ? "开启" : "已关"
-          html += f"<a class='hkbtn' style='background:{bg};color:#fff;' href='/app/rf/edit?kind=door&id={d['id']}'>"
-          html += f"<div class='ic' style='color:#fff;'>{self.ic('door')}</div>"
-          html += f"<div class='nm' style='color:#fff;'>{webserver.html_escape(d['name'])}<br>{txt}</div></a>"
+          self.app_send_part(f"<a class='hkbtn' style='background:{bg};color:#fff;' href='/app/rf/edit?kind=door&id={d['id']}'>")
+          self.app_send_part(f"<div class='ic' style='color:#fff;'>{self.ic('door')}</div>")
+          self.app_send_part(f"<div class='nm' style='color:#fff;'>{webserver.html_escape(d['name'])}<br>{txt}</div></a>")
         elif d["button_count"] > 0
-          html += f"<div class='devwrap wide' id='dev-{d['id']}'>"
-          html += f"<div class='hkbtn' onclick='toggleDev({d['id']})'>"
-          html += f"<div class='ic'>{self.icon_html(d['icon'])}</div>"
-          html += f"<div class='nm'>{webserver.html_escape(d['name'])}</div>"
-          html += "<span class='chv'>" + self.ic("chev") + "</span></div>"
-          html += f"<div class='btnrow' id='btnrow-{d['id']}'>"
+          self.app_send_part(f"<div class='devwrap wide' id='dev-{d['id']}'>")
+          self.app_send_part(f"<div class='hkbtn' onclick='toggleDev({d['id']})'>")
+          self.app_send_part(f"<div class='ic'>{self.icon_html(d['icon'])}</div>")
+          self.app_send_part(f"<div class='nm'>{webserver.html_escape(d['name'])}</div>")
+          self.app_send_part("<span class='chv'>" + self.ic("chev") + "</span></div>")
+          self.app_send_part(f"<div class='btnrow' id='btnrow-{d['id']}'>")
           for b : d["buttons"]
             var recorded = b.find("recorded", false) || b.find("value", 0) > 0
             if recorded
-              html += f"<a class='sqcell' href='/app/api/send?rid={d['id']}&bid={b['id']}' onclick='sendBtn(this.href);return false;'>"
-              html += f"<div class='sqbtn'>{self.icon_html(b.find('icon', d['icon']))}</div>"
-              html += f"<div class='sqlbl'>{webserver.html_escape(b['name'])}</div></a>"
+              self.app_send_part(f"<a class='sqcell' href='/app/api/send?rid={d['id']}&bid={b['id']}' onclick='sendBtn(this.href);return false;'>")
+              self.app_send_part(f"<div class='sqbtn'>{self.icon_html(b.find('icon', d['icon']))}</div>")
+              self.app_send_part(f"<div class='sqlbl'>{webserver.html_escape(b['name'])}</div></a>")
             else
-              html += f"<a class='sqcell' href='/app/rf/edit?kind=remote&id={d['id']}&learn=1&bid={b['id']}'>"
-              html += f"<div class='sqbtn' style='color:var(--red);'>{self.icon_html(b.find('icon', d['icon']))}</div>"
-              html += f"<div class='sqlbl'>{webserver.html_escape(b['name'])}<br>未录制</div></a>"
+              self.app_send_part(f"<a class='sqcell' href='/app/rf/edit?kind=remote&id={d['id']}&learn=1&bid={b['id']}'>")
+              self.app_send_part(f"<div class='sqbtn' style='color:var(--red);'>{self.icon_html(b.find('icon', d['icon']))}</div>")
+              self.app_send_part(f"<div class='sqlbl'>{webserver.html_escape(b['name'])}<br>未录制</div></a>")
             end
           end
-          html += "</div></div>"
+          self.app_send_part("</div></div>")
         else
-          html += f"<a class='hkbtn' href='/app/rf/view?id={d['id']}'>"
-          html += f"<div class='ic'>{self.icon_html(d['icon'])}</div>"
-          html += f"<div class='nm'>{webserver.html_escape(d['name'])}</div></a>"
+          self.app_send_part(f"<a class='hkbtn' href='/app/rf/view?id={d['id']}'>")
+          self.app_send_part(f"<div class='ic'>{self.icon_html(d['icon'])}</div>")
+          self.app_send_part(f"<div class='nm'>{webserver.html_escape(d['name'])}</div></a>")
         end
       end
-      html += "</div>"
+      self.app_send_part("</div>")
     else
-      html += "<div class='card' style='color:#8e8e93;font-size:12px;'>暂无设备，请到管理中新建</div>"
+      self.app_send_part("<div class='card' style='color:#8e8e93;font-size:12px;'>暂无设备，请到管理中新建</div>")
     end
-    html += "<div class='sect'>虚拟设备</div>"
+    self.app_send_part("<div class='sect'>虚拟设备</div>")
     if size(g.virtual_devices) > 0
-      html += "<div class='grid4'>"
+      self.app_send_part("<div class='grid4'>")
       for vd : g.virtual_devices
         var vst = vd.find("state","OFF") == "ON"
         var vtxt = vst ? "ON" : "OFF"
         var vbg = vst ? "var(--green)" : "var(--card)"
         var vfg = vst ? "#fff" : "var(--label)"
-        html += f"<a class='hkbtn' style='background:{vbg};color:{vfg};' href='/app/api/vdtog?name={vd['name']}'><div class='ic' style='color:{vfg};'>{self.ic('antenna')}</div><div class='nm' style='color:{vfg};'>{webserver.html_escape(vd['name'])}<br>{vtxt}</div></a>"
+        self.app_send_part(f"<a class='hkbtn' style='background:{vbg};color:{vfg};' href='/app/api/vdtog?name={vd['name']}'><div class='ic' style='color:{vfg};'>{self.ic('antenna')}</div><div class='nm' style='color:{vfg};'>{webserver.html_escape(vd['name'])}<br>{vtxt}</div></a>")
       end
-      html += "</div>"
+      self.app_send_part("</div>")
     end
-    html += "<script>function toggleDev(id){var w=document.getElementById('dev-'+id);if(w){w.classList.toggle('open')}}function sendBtn(url){fetch(url).catch(function(e){});}</script>"
-    self.app_send_page("射频网关", "设备", html)
+    self.app_send_part("<script>function toggleDev(id){var w=document.getElementById('dev-'+id);if(w){w.classList.toggle('open')}}function sendBtn(url){fetch(url).catch(function(e){});}</script>")
+    self.app_send_footer("设备")
   end
 
   def handle_app_rf_view_page()
@@ -723,13 +739,15 @@ class Cc1101WebApp
       var bits = webserver.arg("bits")
       var protocol = webserver.arg("protocol")
       var pulse = webserver.arg("pulse_length")
-      html += "<div class='sect'>已捕获信号</div>"
-      html += "<div class='card' style='font-size:12px;color:#666;line-height:1.8;'>"
-      html += f"<div>编码: <b>{value}</b></div>"
-      html += f"<div>位数: {bits}</div>"
-      html += f"<div>协议: P{protocol}</div>"
-      html += f"<div>脉宽: {pulse}</div>"
-      html += "</div>"
+      self.app_send_header("添加设备", "管理")
+      self.app_send_part(html)
+      self.app_send_part("<div class='sect'>已捕获信号</div>")
+      self.app_send_part("<div class='card' style='font-size:12px;color:#666;line-height:1.8;'>")
+      self.app_send_part(f"<div>编码: <b>{value}</b></div>")
+      self.app_send_part(f"<div>位数: {bits}</div>")
+      self.app_send_part(f"<div>协议: P{protocol}</div>")
+      self.app_send_part(f"<div>脉宽: {pulse}</div>")
+      self.app_send_part("</div>")
       if kind == "door"
         var name = webserver.arg("name")
         var location = webserver.arg("location")
@@ -737,20 +755,20 @@ class Cc1101WebApp
         if name == nil name = "" end
         if location == nil location = "" end
         if note == nil note = "" end
-        html += "<form method='get' action='/app/rf/record'>"
-        html += "<input type='hidden' name='type' value='door'>"
-        html += "<input type='hidden' name='save' value='1'>"
-        html += f"<input type='hidden' name='code' value='{value}'>"
-        html += f"<input type='hidden' name='bits' value='{bits}'>"
-        html += "<div class='sect'>名称</div>"
-        html += f"<div class='card'><input name='name' value='{webserver.html_escape(name)}' placeholder='如：前门' style='width:100%;border:none;font-size:14px;background:transparent;' required></div>"
-        html += "<div class='sect'>位置</div>"
-        html += f"<div class='card'><input name='location' value='{webserver.html_escape(location)}' placeholder='如：正门' style='width:100%;border:none;font-size:14px;background:transparent;'></div>"
-        html += "<div class='sect'>备注</div>"
-        html += f"<div class='card'><input name='note' value='{webserver.html_escape(note)}' placeholder='可选' style='width:100%;border:none;font-size:14px;background:transparent;'></div>"
-        html += "<button class='btn blue' type='submit'>保存门磁</button>"
-        html += "</form>"
-        self.app_send_page("添加设备", "管理", html)
+        self.app_send_part("<form method='get' action='/app/rf/record'>")
+        self.app_send_part("<input type='hidden' name='type' value='door'>")
+        self.app_send_part("<input type='hidden' name='save' value='1'>")
+        self.app_send_part(f"<input type='hidden' name='code' value='{value}'>")
+        self.app_send_part(f"<input type='hidden' name='bits' value='{bits}'>")
+        self.app_send_part("<div class='sect'>名称</div>")
+        self.app_send_part(f"<div class='card'><input name='name' value='{webserver.html_escape(name)}' placeholder='如：前门' style='width:100%;border:none;font-size:14px;background:transparent;' required></div>")
+        self.app_send_part("<div class='sect'>位置</div>")
+        self.app_send_part(f"<div class='card'><input name='location' value='{webserver.html_escape(location)}' placeholder='如：正门' style='width:100%;border:none;font-size:14px;background:transparent;'></div>")
+        self.app_send_part("<div class='sect'>备注</div>")
+        self.app_send_part(f"<div class='card'><input name='note' value='{webserver.html_escape(note)}' placeholder='可选' style='width:100%;border:none;font-size:14px;background:transparent;'></div>")
+        self.app_send_part("<button class='btn blue' type='submit'>保存门磁</button>")
+        self.app_send_part("</form>")
+        self.app_send_footer("管理")
         return
       end
 
@@ -766,74 +784,76 @@ class Cc1101WebApp
       if group == nil group = "" end
       if note == nil note = "" end
       if icon == nil || icon == "" icon = "remote" end
-      html += "<form method='get' action='/app/rf/record'>"
-      html += "<input type='hidden' name='type' value='remote'>"
-      html += "<input type='hidden' name='savebtn' value='1'>"
-      html += f"<input type='hidden' name='idx' value='{idx}'>"
-      html += f"<input type='hidden' name='total' value='{total}'>"
-      html += f"<input type='hidden' name='value' value='{value}'>"
-      html += f"<input type='hidden' name='bits' value='{bits}'>"
-      html += f"<input type='hidden' name='protocol' value='{protocol}'>"
-      html += f"<input type='hidden' name='pulse_length' value='{pulse}'>"
+      self.app_send_part("<form method='get' action='/app/rf/record'>")
+      self.app_send_part("<input type='hidden' name='type' value='remote'>")
+      self.app_send_part("<input type='hidden' name='savebtn' value='1'>")
+      self.app_send_part(f"<input type='hidden' name='idx' value='{idx}'>")
+      self.app_send_part(f"<input type='hidden' name='total' value='{total}'>")
+      self.app_send_part(f"<input type='hidden' name='value' value='{value}'>")
+      self.app_send_part(f"<input type='hidden' name='bits' value='{bits}'>")
+      self.app_send_part(f"<input type='hidden' name='protocol' value='{protocol}'>")
+      self.app_send_part(f"<input type='hidden' name='pulse_length' value='{pulse}'>")
       if idx == 1
-        html += "<div class='sect'>设备名称</div>"
-        html += f"<div class='card'><input name='name' value='{webserver.html_escape(name)}' placeholder='如：卷帘门' style='width:100%;border:none;font-size:14px;background:transparent;' required></div>"
-        html += "<div class='sect'>分组</div>"
-        html += f"<div class='card'><input name='group' value='{webserver.html_escape(group)}' placeholder='如：门窗' style='width:100%;border:none;font-size:14px;background:transparent;'></div>"
-        html += "<div class='sect'>备注</div>"
-        html += f"<div class='card'><input name='note' value='{webserver.html_escape(note)}' placeholder='可选' style='width:100%;border:none;font-size:14px;background:transparent;'></div>"
-        html += "<div class='sect'>设备图标</div>"
-        html += "<div class='card'>" + self.icon_picker_html(self.icon_key(icon)) + "</div>"
-        html += "<script>" + self.icon_picker_js() + "</script>"
+        self.app_send_part("<div class='sect'>设备名称</div>")
+        self.app_send_part(f"<div class='card'><input name='name' value='{webserver.html_escape(name)}' placeholder='如：卷帘门' style='width:100%;border:none;font-size:14px;background:transparent;' required></div>")
+        self.app_send_part("<div class='sect'>分组</div>")
+        self.app_send_part(f"<div class='card'><input name='group' value='{webserver.html_escape(group)}' placeholder='如：门窗' style='width:100%;border:none;font-size:14px;background:transparent;'></div>")
+        self.app_send_part("<div class='sect'>备注</div>")
+        self.app_send_part(f"<div class='card'><input name='note' value='{webserver.html_escape(note)}' placeholder='可选' style='width:100%;border:none;font-size:14px;background:transparent;'></div>")
+        self.app_send_part("<div class='sect'>设备图标</div>")
+        self.app_send_part("<div class='card'>" + self.icon_picker_html(self.icon_key(icon)) + "</div>")
+        self.app_send_part("<script>" + self.icon_picker_js() + "</script>")
       else
-        html += f"<input type='hidden' name='name' value='{webserver.html_escape(name)}'>"
-        html += f"<input type='hidden' name='group' value='{webserver.html_escape(group)}'>"
-        html += f"<input type='hidden' name='note' value='{webserver.html_escape(note)}'>"
-        html += f"<input type='hidden' name='icon' value='{webserver.html_escape(icon)}'>"
-        html += "<div class='card' style='font-size:12px;color:#666;'>设备: " + webserver.html_escape(name) + " · 按钮 " + str(idx) + "/" + str(total) + "</div>"
+        self.app_send_part(f"<input type='hidden' name='name' value='{webserver.html_escape(name)}'>")
+        self.app_send_part(f"<input type='hidden' name='group' value='{webserver.html_escape(group)}'>")
+        self.app_send_part(f"<input type='hidden' name='note' value='{webserver.html_escape(note)}'>")
+        self.app_send_part(f"<input type='hidden' name='icon' value='{webserver.html_escape(icon)}'>")
+        self.app_send_part("<div class='card' style='font-size:12px;color:#666;'>设备: " + webserver.html_escape(name) + " · 按钮 " + str(idx) + "/" + str(total) + "</div>")
       end
-      html += "<div class='sect'>按钮名称</div>"
-      html += "<div class='card'><input id='btnname' name='btn_name' value='按钮" + str(idx) + "' placeholder='如：上' style='width:100%;border:none;font-size:14px;background:transparent;' required></div>"
+      self.app_send_part("<div class='sect'>按钮名称</div>")
+      self.app_send_part("<div class='card'><input id='btnname' name='btn_name' value='按钮" + str(idx) + "' placeholder='如：上' style='width:100%;border:none;font-size:14px;background:transparent;' required></div>")
       if total == 4
-        html += "<div class='card' style='display:flex;gap:8px;align-items:center;font-size:12px;color:var(--secondary);'>常用: "
+        self.app_send_part("<div class='card' style='display:flex;gap:8px;align-items:center;font-size:12px;color:var(--secondary);'>常用: ")
         for preset : ["上","停","下","锁"]
-          html += "<span style='padding:4px 8px;background:var(--fill);border-radius:8px;cursor:pointer;' onclick=\"document.getElementById('btnname').value='" + preset + "'\">" + preset + "</span>"
+          self.app_send_part("<span style='padding:4px 8px;background:var(--fill);border-radius:8px;cursor:pointer;' onclick=\"document.getElementById('btnname').value='" + preset + "'\">" + preset + "</span>")
         end
-        html += "</div>"
+        self.app_send_part("</div>")
       end
-      html += "<div class='sect'>按钮图标</div>"
-      html += "<div class='card'>" + self.icon_select_html("bicon", icon) + "</div>"
-      html += "<div class='sect'>重复次数</div>"
-      html += "<div class='card'><input name='repeat' type='number' value='10' style='width:100%;border:none;font-size:14px;background:transparent;'></div>"
-      html += "<button class='btn blue' type='submit'>" + (idx < total ? "保存并录制下一按钮" : "保存设备") + "</button>"
-      html += "</form>"
-      self.app_send_page("录制设备", "管理", html)
+      self.app_send_part("<div class='sect'>按钮图标</div>")
+      self.app_send_part("<div class='card'>" + self.icon_select_html("bicon", icon) + "</div>")
+      self.app_send_part("<div class='sect'>重复次数</div>")
+      self.app_send_part("<div class='card'><input name='repeat' type='number' value='10' style='width:100%;border:none;font-size:14px;background:transparent;'></div>")
+      self.app_send_part("<button class='btn blue' type='submit'>" + (idx < total ? "保存并录制下一按钮" : "保存设备") + "</button>")
+      self.app_send_part("</form>")
+      self.app_send_footer("管理")
       return
     end
 
     # 默认页：设备类型 + 基础信息 + 按钮数量，创建后进入按钮录制页
-    html += "<div class='sect'>设备类型</div>"
-    html += "<div class='card' style='display:flex;gap:10px;'>"
-    html += "<label class='typepick on'><input type='radio' name='type' value='remote' checked onclick='pickType()'><span class='ic'>" + self.ic("remote") + "</span><span>遥控</span></label>"
-    html += "<label class='typepick'><input type='radio' name='type' value='door' onclick='pickType()'><span class='ic'>" + self.ic("door") + "</span><span>门磁</span></label>"
-    html += "</div>"
-    html += "<div class='formgrid'>"
-    html += "<div><div class='sect'>名称</div><div class='card'><input id='devname' placeholder='如：卷帘门' style='width:100%;border:none;font-size:14px;background:transparent;' required></div></div>"
-    html += "<div id='grprow'><div class='sect'>分组</div><div class='card'><input id='devgroup' placeholder='如：门窗' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>"
-    html += "<div id='locrow' style='display:none;'><div class='sect'>位置</div><div class='card'><input id='devloc' placeholder='如：客厅' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>"
-    html += "<div id='btnrow'><div class='sect'>按钮数量</div><div class='card'><input id='btotal' type='number' value='4' min='1' max='12' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>"
-    html += "<div class='full'><div class='sect'>备注</div><div class='card'><input id='devnote' placeholder='可选' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>"
-    html += "</div>"
-    html += "<div id='iconrow'><div class='sect'>设备图标</div>"
-    html += "<div class='card'>" + self.icon_picker_html("remote") + "</div></div>"
-    html += "<script>"
-    html += self.icon_picker_js()
-    html += "function pickType(){var labels=document.querySelectorAll('.typepick');for(var i=0;i<labels.length;i++){labels[i].classList.remove('on')}var t=document.querySelector('input[name=type]:checked').value;document.querySelector('input[name=type]:checked').closest('.typepick').classList.add('on');document.getElementById('grprow').style.display=t==='remote'?'block':'none';document.getElementById('locrow').style.display=t==='door'?'block':'none';document.getElementById('btnrow').style.display=t==='remote'?'block':'none';document.getElementById('iconrow').style.display=t==='remote'?'block':'none';var b=document.getElementById('startbtn');if(b)b.textContent=t==='remote'?'创建设备':'开始配对';}"
-    html += "function startRecord(){var t=document.querySelector('input[name=type]:checked').value;var name=encodeURIComponent(document.getElementById('devname').value||(t==='door'?'新门磁':'新遥控'));var note=encodeURIComponent(document.getElementById('devnote').value);if(t==='remote'){var total=parseInt(document.getElementById('btotal').value||'4',10);if(!total||total<1)total=1;var group=encodeURIComponent(document.getElementById('devgroup').value);var icon=document.querySelector('input[name=icon]:checked').value;window.location.href='/app/rf/record?create=1&type=remote&total='+total+'&name='+name+'&group='+group+'&note='+note+'&icon='+icon;}else{var loc=encodeURIComponent(document.getElementById('devloc').value);window.location.href='/app/rf/record?learn=1&type=door&name='+name+'&location='+loc+'&note='+note;}}"
-    html += "pickType();"
-    html += "</script>"
-    html += "<button class='btn blue' id='startbtn' type='button' onclick='startRecord()'>创建设备</button>"
-    self.app_send_page("添加设备", "管理", html)
+    self.app_send_header("添加设备", "管理")
+    self.app_send_part(html)
+    self.app_send_part("<div class='sect'>设备类型</div>")
+    self.app_send_part("<div class='card' style='display:flex;gap:10px;'>")
+    self.app_send_part("<label class='typepick on'><input type='radio' name='type' value='remote' checked onclick='pickType()'><span class='ic'>" + self.ic("remote") + "</span><span>遥控</span></label>")
+    self.app_send_part("<label class='typepick'><input type='radio' name='type' value='door' onclick='pickType()'><span class='ic'>" + self.ic("door") + "</span><span>门磁</span></label>")
+    self.app_send_part("</div>")
+    self.app_send_part("<div class='formgrid'>")
+    self.app_send_part("<div><div class='sect'>名称</div><div class='card'><input id='devname' placeholder='如：卷帘门' style='width:100%;border:none;font-size:14px;background:transparent;' required></div></div>")
+    self.app_send_part("<div id='grprow'><div class='sect'>分组</div><div class='card'><input id='devgroup' placeholder='如：门窗' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>")
+    self.app_send_part("<div id='locrow' style='display:none;'><div class='sect'>位置</div><div class='card'><input id='devloc' placeholder='如：客厅' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>")
+    self.app_send_part("<div id='btnrow'><div class='sect'>按钮数量</div><div class='card'><input id='btotal' type='number' value='4' min='1' max='12' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>")
+    self.app_send_part("<div class='full'><div class='sect'>备注</div><div class='card'><input id='devnote' placeholder='可选' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>")
+    self.app_send_part("</div>")
+    self.app_send_part("<div id='iconrow'><div class='sect'>设备图标</div>")
+    self.app_send_part("<div class='card'>" + self.icon_picker_html("remote") + "</div></div>")
+    self.app_send_part("<script>")
+    self.app_send_part(self.icon_picker_js())
+    self.app_send_part("function pickType(){var labels=document.querySelectorAll('.typepick');for(var i=0;i<labels.length;i++){labels[i].classList.remove('on')}var t=document.querySelector('input[name=type]:checked').value;document.querySelector('input[name=type]:checked').closest('.typepick').classList.add('on');document.getElementById('grprow').style.display=t==='remote'?'block':'none';document.getElementById('locrow').style.display=t==='door'?'block':'none';document.getElementById('btnrow').style.display=t==='remote'?'block':'none';document.getElementById('iconrow').style.display=t==='remote'?'block':'none';var b=document.getElementById('startbtn');if(b)b.textContent=t==='remote'?'创建设备':'开始配对';}")
+    self.app_send_part("function startRecord(){var t=document.querySelector('input[name=type]:checked').value;var name=encodeURIComponent(document.getElementById('devname').value||(t==='door'?'新门磁':'新遥控'));var note=encodeURIComponent(document.getElementById('devnote').value);if(t==='remote'){var total=parseInt(document.getElementById('btotal').value||'4',10);if(!total||total<1)total=1;var group=encodeURIComponent(document.getElementById('devgroup').value);var icon=document.querySelector('input[name=icon]:checked').value;window.location.href='/app/rf/record?create=1&type=remote&total='+total+'&name='+name+'&group='+group+'&note='+note+'&icon='+icon;}else{var loc=encodeURIComponent(document.getElementById('devloc').value);window.location.href='/app/rf/record?learn=1&type=door&name='+name+'&location='+loc+'&note='+note;}}")
+    self.app_send_part("pickType();")
+    self.app_send_part("</script>")
+    self.app_send_part("<button class='btn blue' id='startbtn' type='button' onclick='startRecord()'>创建设备</button>")
+    self.app_send_footer("管理")
   end
 
   # ============ 设备编辑（遥控/门磁统一，替代 /rf/edit + /door/edit）============
@@ -970,6 +990,9 @@ class Cc1101WebApp
         var protocol = int(webserver.arg("protocol"))
         var pulse = int(webserver.arg("pulse_length"))
         if bid != nil && value != nil && value > 0
+          g.learn_mode = false
+          g.learn_result = nil
+          tasmota.remove_timer(g._TIMER_RECORD)
           g.update_remote_button(id, bid, {"value": value, "bits": bits, "protocol": protocol, "pulse_length": pulse, "recorded": true})
           webserver.redirect("/app/rf/edit?kind=remote&id=" + str(id) + "&saved=1")
           return
@@ -1037,12 +1060,14 @@ class Cc1101WebApp
       self.app_send_page("编辑设备", "管理", html)
       return
     end
+    self.app_send_header("编辑设备", "管理")
+    self.app_send_part(html)
     if webserver.has_arg("created")
-      html += "<div class='card' style='text-align:center;color:var(--green);font-weight:600;'>设备已创建，点击下方按钮开始录制</div>"
+      self.app_send_part("<div class='card' style='text-align:center;color:var(--green);font-weight:600;'>设备已创建，点击下方按钮开始录制</div>")
     elif webserver.has_arg("saved")
-      html += "<div class='card' style='text-align:center;color:var(--green);font-weight:600;'>按钮已保存</div>"
+      self.app_send_part("<div class='card' style='text-align:center;color:var(--green);font-weight:600;'>按钮已保存</div>")
     end
-    html += f"<div class='sect'>{webserver.html_escape(remote['name'])}</div>"
+    self.app_send_part(f"<div class='sect'>{webserver.html_escape(remote['name'])}</div>")
     var btns = remote.find("buttons", [])
     if btns != nil && size(btns) > 0
       var done = 0
@@ -1051,45 +1076,45 @@ class Cc1101WebApp
           done += 1
         end
       end
-      html += "<div class='sect'>按钮</div>"
-      html += f"<div class='hintcard'>已录制 {done}/{size(btns)} · 点击按钮录制或重录，长按按钮编辑射频数据</div>"
-      html += "<div class='grid3'>"
+      self.app_send_part("<div class='sect'>按钮</div>")
+      self.app_send_part(f"<div class='hintcard'>已录制 {done}/{size(btns)} · 点击按钮录制或重录，长按按钮编辑射频数据</div>")
+      self.app_send_part("<div class='grid3'>")
       var i = 0
       for b : btns
         var recorded = b.find("recorded", false) || b.find("value", 0) > 0
         var bg = recorded ? "var(--green)" : "var(--fill)"
         var fg = recorded ? "#fff" : "var(--blue)"
-        html += f"<a class='sqcell' data-idx='{i}' href='/app/rf/edit?kind=remote&id={id}&learn=1&bid={b['id']}' onclick='return tileTap(this);'>"
-        html += f"<div class='sqbtn' style='background:{bg};color:{fg};'>{self.icon_html(b.find('icon', remote.find('icon','remote')))}</div>"
-        html += f"<div class='sqlbl'>{webserver.html_escape(b['name'])}</div></a>"
+        self.app_send_part(f"<a class='sqcell' data-idx='{i}' href='/app/rf/edit?kind=remote&id={id}&learn=1&bid={b['id']}' onclick='return tileTap(this);'>")
+        self.app_send_part(f"<div class='sqbtn' style='background:{bg};color:{fg};'>{self.icon_html(b.find('icon', remote.find('icon','remote')))}</div>")
+        self.app_send_part(f"<div class='sqlbl'>{webserver.html_escape(b['name'])}</div></a>")
         i += 1
       end
-      html += "</div>"
-      html += "<script>"
-      html += "var pressTimer=null,pressedBid=0,longFired=false;"
-      html += "function tileTap(el){if(longFired){longFired=false;return false;}return true;}"
-      html += "function pressStart(el){var idx=parseInt(el.getAttribute('data-idx'),10);pressedBid=idx;longFired=false;clearTimeout(pressTimer);pressTimer=setTimeout(function(){longFired=true;openRf(idx);},600);}"
-      html += "function pressEnd(){clearTimeout(pressTimer);}"
-      html += "document.querySelectorAll('.sqcell[data-idx]').forEach(function(el){el.addEventListener('contextmenu',function(e){e.preventDefault()});el.addEventListener('touchstart',function(e){pressStart(el)},{passive:true});el.addEventListener('touchend',function(e){pressEnd()});el.addEventListener('touchmove',function(e){clearTimeout(pressTimer)});el.addEventListener('mousedown',function(e){pressStart(el)});el.addEventListener('mouseup',function(e){pressEnd()});el.addEventListener('mouseleave',function(e){pressEnd()});});"
-      html += "</script>"
+      self.app_send_part("</div>")
+      self.app_send_part("<script>")
+      self.app_send_part("var pressTimer=null,pressedBid=0,longFired=false;")
+      self.app_send_part("function tileTap(el){if(longFired){longFired=false;return false;}return true;}")
+      self.app_send_part("function pressStart(el){var idx=parseInt(el.getAttribute('data-idx'),10);pressedBid=idx;longFired=false;clearTimeout(pressTimer);pressTimer=setTimeout(function(){longFired=true;openRf(idx);},600);}")
+      self.app_send_part("function pressEnd(){clearTimeout(pressTimer);}")
+      self.app_send_part("document.querySelectorAll('.sqcell[data-idx]').forEach(function(el){el.addEventListener('contextmenu',function(e){e.preventDefault()});el.addEventListener('touchstart',function(e){pressStart(el)},{passive:true});el.addEventListener('touchend',function(e){pressEnd()});el.addEventListener('touchmove',function(e){clearTimeout(pressTimer)});el.addEventListener('mousedown',function(e){pressStart(el)});el.addEventListener('mouseup',function(e){pressEnd()});el.addEventListener('mouseleave',function(e){pressEnd()});});")
+      self.app_send_part("</script>")
     end
-    html += "<form method='get' action='/app/rf/edit'>"
-    html += "<input type='hidden' name='kind' value='remote'>"
-    html += f"<input type='hidden' name='id' value='{id}'>"
-    html += f"<input type='hidden' name='save' value='1'>"
-    html += "<div class='formgrid'>"
-    html += "<div><div class='sect'>名称</div><div class='card'><input name='name' value='" + webserver.html_escape(remote["name"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>"
-    html += "<div><div class='sect'>分组</div><div class='card'><input name='group' value='" + webserver.html_escape(remote["group"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>"
-    html += "<div><div class='sect'>编码值</div><div class='card'><input name='value' type='number' value='" + str(remote["value"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>"
-    html += "<div><div class='sect'>位数</div><div class='card'><input name='bits' type='number' value='" + str(remote["bits"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>"
-    html += "<div><div class='sect'>协议号</div><div class='card'><input name='protocol' type='number' value='" + str(remote["protocol"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>"
-    html += "<div><div class='sect'>脉宽</div><div class='card'><input name='pulse_length' type='number' value='" + str(remote["pulse_length"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>"
-    html += "<div><div class='sect'>重复次数</div><div class='card'><input name='repeat' type='number' value='" + str(remote["repeat"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>"
-    html += "<div class='full'><div class='sect'>备注</div><div class='card'><input name='note' value='" + webserver.html_escape(remote["note"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>"
-    html += "</div>"
-    html += "<div class='sect'>设备图标</div>"
-    html += "<div class='card'>" + self.icon_picker_html(self.icon_key(remote.find("icon","remote"))) + "</div>"
-    html += "<script>" + self.icon_picker_js() + "</script>"
+    self.app_send_part("<form method='get' action='/app/rf/edit'>")
+    self.app_send_part("<input type='hidden' name='kind' value='remote'>")
+    self.app_send_part(f"<input type='hidden' name='id' value='{id}'>")
+    self.app_send_part(f"<input type='hidden' name='save' value='1'>")
+    self.app_send_part("<div class='formgrid'>")
+    self.app_send_part("<div><div class='sect'>名称</div><div class='card'><input name='name' value='" + webserver.html_escape(remote["name"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>")
+    self.app_send_part("<div><div class='sect'>分组</div><div class='card'><input name='group' value='" + webserver.html_escape(remote["group"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>")
+    self.app_send_part("<div><div class='sect'>编码值</div><div class='card'><input name='value' type='number' value='" + str(remote["value"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>")
+    self.app_send_part("<div><div class='sect'>位数</div><div class='card'><input name='bits' type='number' value='" + str(remote["bits"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>")
+    self.app_send_part("<div><div class='sect'>协议号</div><div class='card'><input name='protocol' type='number' value='" + str(remote["protocol"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>")
+    self.app_send_part("<div><div class='sect'>脉宽</div><div class='card'><input name='pulse_length' type='number' value='" + str(remote["pulse_length"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>")
+    self.app_send_part("<div><div class='sect'>重复次数</div><div class='card'><input name='repeat' type='number' value='" + str(remote["repeat"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>")
+    self.app_send_part("<div class='full'><div class='sect'>备注</div><div class='card'><input name='note' value='" + webserver.html_escape(remote["note"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>")
+    self.app_send_part("</div>")
+    self.app_send_part("<div class='sect'>设备图标</div>")
+    self.app_send_part("<div class='card'>" + self.icon_picker_html(self.icon_key(remote.find("icon","remote"))) + "</div>")
+    self.app_send_part("<script>" + self.icon_picker_js() + "</script>")
     if btns != nil && size(btns) > 0
       var i = 0
       for b : btns
@@ -1098,30 +1123,30 @@ class Cc1101WebApp
         var bp = b.find("protocol", 1)
         var bl = b.find("pulse_length", 0)
         var br = b.find("repeat", 10)
-        html += f"<input type='hidden' name='btn_name{i}' value='{webserver.html_escape(b['name'])}'>"
-        html += f"<input type='hidden' name='btn_icon{i}' value='{webserver.html_escape(b.find('icon','remote'))}'>"
-        html += f"<input type='hidden' id='btn_value{i}' name='btn_value{i}' value='{bv}'>"
-        html += f"<input type='hidden' id='btn_bits{i}' name='btn_bits{i}' value='{bb}'>"
-        html += f"<input type='hidden' id='btn_protocol{i}' name='btn_protocol{i}' value='{bp}'>"
-        html += f"<input type='hidden' id='btn_pulse{i}' name='btn_pulse{i}' value='{bl}'>"
-        html += f"<input type='hidden' id='btn_repeat{i}' name='btn_repeat{i}' value='{br}'>"
+        self.app_send_part(f"<input type='hidden' name='btn_name{i}' value='{webserver.html_escape(b['name'])}'>")
+        self.app_send_part(f"<input type='hidden' name='btn_icon{i}' value='{webserver.html_escape(b.find('icon','remote'))}'>")
+        self.app_send_part(f"<input type='hidden' id='btn_value{i}' name='btn_value{i}' value='{bv}'>")
+        self.app_send_part(f"<input type='hidden' id='btn_bits{i}' name='btn_bits{i}' value='{bb}'>")
+        self.app_send_part(f"<input type='hidden' id='btn_protocol{i}' name='btn_protocol{i}' value='{bp}'>")
+        self.app_send_part(f"<input type='hidden' id='btn_pulse{i}' name='btn_pulse{i}' value='{bl}'>")
+        self.app_send_part(f"<input type='hidden' id='btn_repeat{i}' name='btn_repeat{i}' value='{br}'>")
         i += 1
       end
-      html += "<div class='rfmask' id='rfmask' onclick='if(event.target===this)closeRf()'>"
-      html += "<div class='rfbox'>"
-      html += "<h3 id='rftitle'>射频数据</h3>"
-      html += "<div style='font-size:12px;color:var(--secondary);'>修改后随设备表单一起保存</div>"
-      html += "<div style='margin-top:12px;'><label style='display:block;font-size:11px;color:var(--secondary);margin-bottom:4px;'>按钮名称</label><input id='rf_name' type='text' style='width:100%;border:none;font-size:14px;background:var(--fill);border-radius:8px;padding:8px 10px;'></div>"
-      html += "<div class='rfgrid'>"
-      html += "<div class='rfld'><label>编码值</label><input id='rf_value' type='number'></div>"
-      html += "<div class='rfld'><label>位数</label><input id='rf_bits' type='number'></div>"
-      html += "<div class='rfld'><label>协议号</label><input id='rf_protocol' type='number'></div>"
-      html += "<div class='rfld'><label>脉宽</label><input id='rf_pulse' type='number'></div>"
-      html += "<div class='rfld'><label>重复次数</label><input id='rf_repeat' type='number'></div>"
-      html += "</div>"
-      html += "<div class='btns'><button class='btn gray' type='button' onclick='closeRf()'>取消</button><button class='btn blue' type='button' onclick='saveRf()'>保存</button></div>"
-      html += "</div></div>"
-      html += "<script>"
+      self.app_send_part("<div class='rfmask' id='rfmask' onclick='if(event.target===this)closeRf()'>")
+      self.app_send_part("<div class='rfbox'>")
+      self.app_send_part("<h3 id='rftitle'>射频数据</h3>")
+      self.app_send_part("<div style='font-size:12px;color:var(--secondary);'>修改后随设备表单一起保存</div>")
+      self.app_send_part("<div style='margin-top:12px;'><label style='display:block;font-size:11px;color:var(--secondary);margin-bottom:4px;'>按钮名称</label><input id='rf_name' type='text' style='width:100%;border:none;font-size:14px;background:var(--fill);border-radius:8px;padding:8px 10px;'></div>")
+      self.app_send_part("<div class='rfgrid'>")
+      self.app_send_part("<div class='rfld'><label>编码值</label><input id='rf_value' type='number'></div>")
+      self.app_send_part("<div class='rfld'><label>位数</label><input id='rf_bits' type='number'></div>")
+      self.app_send_part("<div class='rfld'><label>协议号</label><input id='rf_protocol' type='number'></div>")
+      self.app_send_part("<div class='rfld'><label>脉宽</label><input id='rf_pulse' type='number'></div>")
+      self.app_send_part("<div class='rfld'><label>重复次数</label><input id='rf_repeat' type='number'></div>")
+      self.app_send_part("</div>")
+      self.app_send_part("<div class='btns'><button class='btn gray' type='button' onclick='closeRf()'>取消</button><button class='btn blue' type='button' onclick='saveRf()'>保存</button></div>")
+      self.app_send_part("</div></div>")
+      self.app_send_part("<script>")
       import json
       var bdata = []
       var k = 0
@@ -1129,18 +1154,18 @@ class Cc1101WebApp
         bdata.push({"i": k, "name": b.find("name", "按钮" + str(b.find("id", k + 1))), "value": b.find("value", 0), "bits": b.find("bits", 24), "protocol": b.find("protocol", 1), "pulse": b.find("pulse_length", 0), "repeat": b.find("repeat", 10)})
         k += 1
       end
-      html += "var BTNS=" + json.dump(bdata) + ";"
-      html += "var RFIDX=-1;"
-      html += "function openRf(i){RFIDX=i;var d=BTNS[RFIDX];if(!d)return;document.getElementById('rftitle').textContent=d.name+' · 射频数据';document.getElementById('rf_name').value=d.name;document.getElementById('rf_value').value=d.value;document.getElementById('rf_bits').value=d.bits;document.getElementById('rf_protocol').value=d.protocol;document.getElementById('rf_pulse').value=d.pulse;document.getElementById('rf_repeat').value=d.repeat;document.getElementById('rfmask').classList.add('open');}"
-      html += "function closeRf(){document.getElementById('rfmask').classList.remove('open');}"
-      html += "function saveRf(){if(RFIDX<0)return;var set=function(id){return document.getElementById(id).value};document.getElementById('btn_name'+RFIDX).value=set('rf_name');document.getElementById('btn_value'+RFIDX).value=set('rf_value');document.getElementById('btn_bits'+RFIDX).value=set('rf_bits');document.getElementById('btn_protocol'+RFIDX).value=set('rf_protocol');document.getElementById('btn_pulse'+RFIDX).value=set('rf_pulse');document.getElementById('btn_repeat'+RFIDX).value=set('rf_repeat');closeRf();}"
-      html += "</script>"
+      self.app_send_part("var BTNS=" + json.dump(bdata) + ";")
+      self.app_send_part("var RFIDX=-1;")
+      self.app_send_part("function openRf(i){RFIDX=i;var d=BTNS[RFIDX];if(!d)return;document.getElementById('rftitle').textContent=d.name+' · 射频数据';document.getElementById('rf_name').value=d.name;document.getElementById('rf_value').value=d.value;document.getElementById('rf_bits').value=d.bits;document.getElementById('rf_protocol').value=d.protocol;document.getElementById('rf_pulse').value=d.pulse;document.getElementById('rf_repeat').value=d.repeat;document.getElementById('rfmask').classList.add('open');}")
+      self.app_send_part("function closeRf(){document.getElementById('rfmask').classList.remove('open');}")
+      self.app_send_part("function saveRf(){if(RFIDX<0)return;var set=function(id){return document.getElementById(id).value};document.getElementById('btn_name'+RFIDX).value=set('rf_name');document.getElementById('btn_value'+RFIDX).value=set('rf_value');document.getElementById('btn_bits'+RFIDX).value=set('rf_bits');document.getElementById('btn_protocol'+RFIDX).value=set('rf_protocol');document.getElementById('btn_pulse'+RFIDX).value=set('rf_pulse');document.getElementById('btn_repeat'+RFIDX).value=set('rf_repeat');closeRf();}")
+      self.app_send_part("</script>")
     end
-    html += "<button class='btn blue' type='submit'>保存</button>"
-    html += "</form>"
-    html += f"<a class='btn gray' href='/app/rf/view?id={id}'>测试发送</a>"
-    html += f"<a class='btn gray' href='/app/api/rf/delete?kind=remote&id={id}'>删除遥控</a>"
-    self.app_send_page("编辑设备", "管理", html)
+    self.app_send_part("<button class='btn blue' type='submit'>保存</button>")
+    self.app_send_part("</form>")
+    self.app_send_part(f"<a class='btn gray' href='/app/rf/view?id={id}'>测试发送</a>")
+    self.app_send_part(f"<a class='btn gray' href='/app/api/rf/delete?kind=remote&id={id}'>删除遥控</a>")
+    self.app_send_footer("管理")
   end
 
   # ============ 遥控管理列表（替代 /rf）============
@@ -1148,21 +1173,21 @@ class Cc1101WebApp
     import webserver
     import string
     var g = gateway
-    var html = ""
-    html += "<a href='/app/rf' style='text-decoration:none;color:#007aff;font-size:13px;'>‹ 返回首页</a>"
-    html += "<div class='sect'>设备管理</div>"
-    html += "<a class='btn blue' href='/app/rf/record'>＋ 添加设备</a>"
+    self.app_send_header("设备管理", "管理")
+    self.app_send_part("<a href='/app/rf' style='text-decoration:none;color:#007aff;font-size:13px;'>‹ 返回首页</a>")
+    self.app_send_part("<div class='sect'>设备管理</div>")
+    self.app_send_part("<a class='btn blue' href='/app/rf/record'>＋ 添加设备</a>")
     var search = ""
     if webserver.has_arg("search")
       search = webserver.arg("search")
     end
     var filter = webserver.arg("kind")
     if filter == nil filter = "" end
-    html += "<form method='get' action='/app/rf/manage' style='margin:8px 0;'>"
+    self.app_send_part("<form method='get' action='/app/rf/manage' style='margin:8px 0;'>")
     if filter != ""
-      html += f"<input type='hidden' name='kind' value='{webserver.html_escape(filter)}'>"
+      self.app_send_part(f"<input type='hidden' name='kind' value='{webserver.html_escape(filter)}'>")
     end
-    html += f"<div class='card' style='display:flex;gap:8px;'><input name='search' placeholder='搜索名称/分组/位置' value='{webserver.html_escape(search)}' style='flex:1;border:none;font-size:14px;background:transparent;'><button type='submit'>🔍</button></div></form>"
+    self.app_send_part(f"<div class='card' style='display:flex;gap:8px;'><input name='search' placeholder='搜索名称/分组/位置' value='{webserver.html_escape(search)}' style='flex:1;border:none;font-size:14px;background:transparent;'><button type='submit'>🔍</button></div></form>")
     var count = 0
     for d : g.all_devices()
       if filter != "" && d["kind"] != filter
@@ -1178,9 +1203,9 @@ class Cc1101WebApp
       end
       if matched
         count += 1
-        html += "<div class='card cell'>"
-        html += f"<div class='ic'>{self.icon_html(d['icon'])}</div>"
-        html += f"<div class='tx'><div class='t1'>{webserver.html_escape(d['name'])}<span class='badge'>{d['type_label']}</span></div>"
+        self.app_send_part("<div class='card cell'>")
+        self.app_send_part(f"<div class='ic'>{self.icon_html(d['icon'])}</div>")
+        self.app_send_part(f"<div class='tx'><div class='t1'>{webserver.html_escape(d['name'])}<span class='badge'>{d['type_label']}</span></div>")
         if d["kind"] == "remote"
           if d["button_count"] > 0
             var done = 0
@@ -1189,25 +1214,25 @@ class Cc1101WebApp
                 done += 1
               end
             end
-            html += f"<div class='t2'>{done}/{d['button_count']} 已录制 · {webserver.html_escape(d['group'])}</div>"
+            self.app_send_part(f"<div class='t2'>{done}/{d['button_count']} 已录制 · {webserver.html_escape(d['group'])}</div>")
           else
-            html += f"<div class='t2'>P{d['protocol']} · {d['bits']}bit · {webserver.html_escape(d['group'])}</div>"
+            self.app_send_part(f"<div class='t2'>P{d['protocol']} · {d['bits']}bit · {webserver.html_escape(d['group'])}</div>")
           end
         else
           var st = d["state"] == "OPEN" ? "开启" : "已关"
-          html += f"<div class='t2'>{webserver.html_escape(d['location'])} · {d['code']} · {st}</div>"
+          self.app_send_part(f"<div class='t2'>{webserver.html_escape(d['location'])} · {d['code']} · {st}</div>")
         end
-        html += "</div>"
+        self.app_send_part("</div>")
         if d["kind"] == "remote"
-          html += f"<a class='btn blue' style='padding:8px 12px;font-size:11px;margin:0;' href='/app/rf/view?id={d['id']}'>发送</a>"
+          self.app_send_part(f"<a class='btn blue' style='padding:8px 12px;font-size:11px;margin:0;' href='/app/rf/view?id={d['id']}'>发送</a>")
         end
-        html += f"<a class='btn gray' style='padding:8px 12px;font-size:11px;margin:0;' href='/app/rf/edit?kind={d['kind']}&id={d['id']}'>✎</a></div>"
+        self.app_send_part(f"<a class='btn gray' style='padding:8px 12px;font-size:11px;margin:0;' href='/app/rf/edit?kind={d['kind']}&id={d['id']}'>✎</a></div>")
       end
     end
     if count == 0
-      html += "<div class='card' style='text-align:center;color:#8e8e93;font-size:12px;'>暂无设备</div>"
+      self.app_send_part("<div class='card' style='text-align:center;color:#8e8e93;font-size:12px;'>暂无设备</div>")
     end
-    self.app_send_page("设备管理", "管理", html)
+    self.app_send_footer("管理")
   end
 
   # ============ 删除遥控 API ============
