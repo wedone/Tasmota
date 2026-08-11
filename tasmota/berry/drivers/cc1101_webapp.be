@@ -118,9 +118,9 @@ class Cc1101WebApp
     css += ".sect{font-size:13px;color:var(--secondary);font-weight:600;margin:20px 0 8px;letter-spacing:.02em;}"
     css += ".grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}"
     css += ".grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}"
-    css += ".hkbtn{background:var(--card);border-radius:20px;text-align:center;padding:22px 6px;text-decoration:none;color:var(--label);display:block;transition:transform .12s ease,opacity .12s ease;} .hkbtn:active{transform:scale(.96);opacity:.85;}"
-    css += ".hkbtn .ic{font-size:34px;line-height:1;color:var(--blue);} .hkbtn .ic svg{width:34px;height:34px;} .hkbtn .nm{font-size:12px;margin-top:8px;font-weight:500;color:var(--secondary);}"
-    css += ".devwrap{background:var(--card);border-radius:20px;overflow:hidden;} .devwrap.wide{grid-column:1 / -1;} .devwrap>.hkbtn{background:transparent;padding:20px 8px 12px;cursor:pointer;position:relative;} .devwrap>.hkbtn .chv{position:absolute;right:8px;top:10px;color:var(--secondary);display:flex;transition:transform .15s ease;} .devwrap>.hkbtn .chv svg{width:16px;height:16px;} .devwrap.open>.hkbtn .chv{transform:rotate(90deg);}"
+    css += ".hkbtn{background:var(--card);border-radius:16px;text-align:center;padding:16px 4px;text-decoration:none;color:var(--label);display:block;transition:transform .12s ease,opacity .12s ease;} .hkbtn:active{transform:scale(.96);opacity:.85;}"
+    css += ".hkbtn .ic{font-size:26px;line-height:1;color:var(--blue);} .hkbtn .ic svg{width:26px;height:26px;} .hkbtn .nm{font-size:11px;margin-top:6px;font-weight:500;color:var(--secondary);}"
+    css += ".devwrap{background:var(--card);border-radius:16px;overflow:hidden;} .devwrap.wide{grid-column:1 / -1;} .devwrap>.hkbtn{background:transparent;padding:15px 4px 9px;cursor:pointer;position:relative;} .devwrap>.hkbtn .chv{position:absolute;right:6px;top:8px;color:var(--secondary);display:flex;transition:transform .15s ease;} .devwrap>.hkbtn .chv svg{width:13px;height:13px;} .devwrap.open>.hkbtn .chv{transform:rotate(90deg);}"
     css += ".btnrow{display:none;grid-template-columns:repeat(4,1fr);gap:8px;padding:4px 10px 14px;border-top:1px solid var(--sep);} .devwrap.open .btnrow{display:grid;} .btnrow .sqcell .sqbtn{width:100%;height:auto;aspect-ratio:1;min-height:44px;border-radius:14px;} .btnrow .sqcell .sqlbl{font-size:11px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}"
     css += ".badge{display:inline-block;font-size:10px;line-height:1;padding:4px 6px;border-radius:6px;background:var(--fill);color:var(--secondary);margin-left:8px;vertical-align:2px;}"
     css += ".typepick{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 6px;border-radius:12px;background:var(--fill);color:var(--blue);cursor:pointer;border:2px solid transparent;text-align:center;} .typepick input{display:none;} .typepick.on{background:var(--card);border-color:var(--blue);} .typepick .ic{width:28px;height:28px;display:flex;align-items:center;justify-content:center;} .typepick .ic svg{width:28px;height:28px;} .typepick span{font-size:12px;color:var(--label);}"
@@ -244,7 +244,7 @@ class Cc1101WebApp
     end
     html += "<div class='sect'>虚拟设备</div>"
     if size(g.virtual_devices) > 0
-      html += "<div class='grid3'>"
+      html += "<div class='grid4'>"
       for vd : g.virtual_devices
         var vst = vd.find("state","OFF") == "ON"
         var vtxt = vst ? "ON" : "OFF"
