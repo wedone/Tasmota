@@ -203,7 +203,7 @@ class Cc1101WebApp
     var devices = g.all_devices()
     html += "<div class='sect'>设备</div>"
     if size(devices) > 0
-      html += "<div class='grid3'>"
+      html += "<div class='grid4'>"
       for d : devices
         if d["kind"] == "door"
           var st = d["state"]
