@@ -289,6 +289,28 @@ class Cc1101Gateway
     return remote
   end
 
+  def add_remote_with_buttons(name, group, icon, note, count)
+    if icon == nil || icon == "" icon = "remote" end
+    if count == nil || count < 1 count = 1 end
+    var buttons = []
+    var i = 1
+    while i <= count
+      buttons.push({
+        "id": i,
+        "name": "按钮" + str(i),
+        "icon": icon,
+        "value": 0,
+        "bits": 0,
+        "protocol": 0,
+        "pulse_length": 0,
+        "repeat": 10,
+        "recorded": false
+      })
+      i += 1
+    end
+    return self.add_multi_button_remote(name, group, icon, note, buttons)
+  end
+
   def send_remote_button(remote_id, button_id)
     var remote = self.find_remote(remote_id)
     if remote == nil || remote["buttons"] == nil
@@ -315,6 +337,27 @@ class Cc1101Gateway
       if remote["id"] == id
         for k : updates.keys()
           remote[k] = updates[k]
+        end
+        self.save_remotes()
+        return true
+      end
+    end
+    return false
+  end
+
+  def update_remote_button(id, button_id, updates)
+    var remote = self.find_remote(id)
+    if remote == nil
+      return false
+    end
+    var buttons = remote.find("buttons", [])
+    if buttons == nil
+      return false
+    end
+    for b : buttons
+      if b["id"] == button_id
+        for k : updates.keys()
+          b[k] = updates[k]
         end
         self.save_remotes()
         return true
