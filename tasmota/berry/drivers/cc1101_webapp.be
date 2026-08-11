@@ -146,6 +146,10 @@ class Cc1101WebApp
     css += ".ipick .ic{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:24px;} .ipick .ic svg{width:28px;height:28px;} .ipick .nm{font-size:11px;color:var(--secondary);}"
     css += ".formgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;align-items:end;} .formgrid .full{grid-column:1 / -1;} .formgrid .sect{margin:0 0 8px;} .formgrid .card{margin:0;}"
     css += "input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;} input[type=number]{-moz-appearance:textfield;appearance:textfield;}"
+    css += ".hintcard{background:var(--fill);border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--secondary);line-height:1.6;}"
+    css += ".btncard{margin:0;} .btncard .btnhead{display:flex;gap:8px;align-items:center;} .btncard .btnhead input[type=text]{flex:1;border:none;font-size:14px;background:transparent;}"
+    css += ".rfgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 12px;margin-top:10px;} .rfgrid .rfld label{display:block;font-size:11px;color:var(--secondary);margin-bottom:4px;} .rfgrid .rfld input{width:100%;border:none;font-size:14px;background:var(--fill);border-radius:8px;padding:8px 10px;}"
+    css += ".rfmask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:none;align-items:center;justify-content:center;padding:20px;} .rfmask.open{display:flex;} .rfbox{background:var(--card);border-radius:14px;width:100%;max-width:340px;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,.25);} .rfbox h3{margin:0 0 4px;font-size:17px;} .rfbox .rfgrid{margin-top:12px;} .rfbox .btns{display:flex;gap:10px;margin-top:14px;} .rfbox .btns .btn{margin:0;flex:1;font-size:14px;padding:11px;}"
     return css
   end
 
@@ -1002,6 +1006,21 @@ class Cc1101WebApp
           var bi = webserver.arg("btn_icon" + str(i))
           if bn != nil && bn != "" b["name"] = bn end
           if bi != nil && bi != "" b["icon"] = bi end
+          var bv = webserver.arg("btn_value" + str(i))
+          var bb = webserver.arg("btn_bits" + str(i))
+          var bp = webserver.arg("btn_protocol" + str(i))
+          var bl = webserver.arg("btn_pulse" + str(i))
+          var br = webserver.arg("btn_repeat" + str(i))
+          if bv != nil && bv != ""
+            b["value"] = int(bv)
+            b["bits"] = int(bb == nil || bb == "" ? "24" : bb)
+            b["protocol"] = int(bp == nil || bp == "" ? "1" : bp)
+            b["pulse_length"] = int(bl == nil || bl == "" ? "0" : bl)
+            b["repeat"] = int(br == nil || br == "" ? "10" : br)
+            if b["value"] > 0
+              b["recorded"] = true
+            end
+          end
           i += 1
         end
         g.update_remote(id, {"name": name, "group": group, "icon": icon, "protocol": protocol, "value": value, "bits": bits, "pulse_length": pulse, "repeat": repeat, "note": note})
@@ -1026,18 +1045,33 @@ class Cc1101WebApp
     html += f"<div class='sect'>{webserver.html_escape(remote['name'])}</div>"
     var btns = remote.find("buttons", [])
     if btns != nil && size(btns) > 0
+      var done = 0
+      for b : btns
+        if b.find("recorded", false) || b.find("value", 0) > 0
+          done += 1
+        end
+      end
       html += "<div class='sect'>按钮</div>"
+      html += f"<div class='hintcard'>已录制 {done}/{size(btns)} · 点击按钮录制或重录，长按按钮编辑射频数据</div>"
       html += "<div class='grid3'>"
+      var i = 0
       for b : btns
         var recorded = b.find("recorded", false) || b.find("value", 0) > 0
         var bg = recorded ? "var(--green)" : "var(--fill)"
         var fg = recorded ? "#fff" : "var(--blue)"
-        var st = recorded ? "已录制 · 点击重录" : "未录制 · 点击录制"
-        html += f"<a class='sqcell' href='/app/rf/edit?kind=remote&id={id}&learn=1&bid={b['id']}'>"
+        html += f"<a class='sqcell' data-idx='{i}' href='/app/rf/edit?kind=remote&id={id}&learn=1&bid={b['id']}' onclick='return tileTap(this);'>"
         html += f"<div class='sqbtn' style='background:{bg};color:{fg};'>{self.icon_html(b.find('icon', remote.find('icon','remote')))}</div>"
-        html += f"<div class='sqlbl'>{webserver.html_escape(b['name'])}<br>{st}</div></a>"
+        html += f"<div class='sqlbl'>{webserver.html_escape(b['name'])}</div></a>"
+        i += 1
       end
       html += "</div>"
+      html += "<script>"
+      html += "var pressTimer=null,pressedBid=0,longFired=false;"
+      html += "function tileTap(el){if(longFired){longFired=false;return false;}return true;}"
+      html += "function pressStart(el){var idx=parseInt(el.getAttribute('data-idx'),10);pressedBid=idx;longFired=false;clearTimeout(pressTimer);pressTimer=setTimeout(function(){longFired=true;openRf(idx);},600);}"
+      html += "function pressEnd(){clearTimeout(pressTimer);}"
+      html += "document.querySelectorAll('.sqcell[data-idx]').forEach(function(el){el.addEventListener('contextmenu',function(e){e.preventDefault()});el.addEventListener('touchstart',function(e){pressStart(el)},{passive:true});el.addEventListener('touchend',function(e){pressEnd()});el.addEventListener('touchmove',function(e){clearTimeout(pressTimer)});el.addEventListener('mousedown',function(e){pressStart(el)});el.addEventListener('mouseup',function(e){pressEnd()});el.addEventListener('mouseleave',function(e){pressEnd()});});"
+      html += "</script>"
     end
     html += "<form method='get' action='/app/rf/edit'>"
     html += "<input type='hidden' name='kind' value='remote'>"
@@ -1057,17 +1091,50 @@ class Cc1101WebApp
     html += "<div class='card'>" + self.icon_picker_html(self.icon_key(remote.find("icon","remote"))) + "</div>"
     html += "<script>" + self.icon_picker_js() + "</script>"
     if btns != nil && size(btns) > 0
-      html += "<div class='sect'>按钮设置</div>"
-      html += "<div class='formgrid'>"
       var i = 0
       for b : btns
-        html += "<div class='card' style='display:flex;gap:8px;align-items:center;'>"
-        html += f"<input name='btn_name{i}' value='{webserver.html_escape(b['name'])}' style='flex:1;border:none;font-size:14px;background:transparent;'>"
-        html += self.icon_select_html("btn_icon" + str(i), b.find("icon","remote"))
-        html += "</div>"
+        var bv = b.find("value", 0)
+        var bb = b.find("bits", 24)
+        var bp = b.find("protocol", 1)
+        var bl = b.find("pulse_length", 0)
+        var br = b.find("repeat", 10)
+        html += f"<input type='hidden' name='btn_name{i}' value='{webserver.html_escape(b['name'])}'>"
+        html += f"<input type='hidden' name='btn_icon{i}' value='{webserver.html_escape(b.find('icon','remote'))}'>"
+        html += f"<input type='hidden' id='btn_value{i}' name='btn_value{i}' value='{bv}'>"
+        html += f"<input type='hidden' id='btn_bits{i}' name='btn_bits{i}' value='{bb}'>"
+        html += f"<input type='hidden' id='btn_protocol{i}' name='btn_protocol{i}' value='{bp}'>"
+        html += f"<input type='hidden' id='btn_pulse{i}' name='btn_pulse{i}' value='{bl}'>"
+        html += f"<input type='hidden' id='btn_repeat{i}' name='btn_repeat{i}' value='{br}'>"
         i += 1
       end
+      html += "<div class='rfmask' id='rfmask' onclick='if(event.target===this)closeRf()'>"
+      html += "<div class='rfbox'>"
+      html += "<h3 id='rftitle'>射频数据</h3>"
+      html += "<div style='font-size:12px;color:var(--secondary);'>修改后随设备表单一起保存</div>"
+      html += "<div style='margin-top:12px;'><label style='display:block;font-size:11px;color:var(--secondary);margin-bottom:4px;'>按钮名称</label><input id='rf_name' type='text' style='width:100%;border:none;font-size:14px;background:var(--fill);border-radius:8px;padding:8px 10px;'></div>"
+      html += "<div class='rfgrid'>"
+      html += "<div class='rfld'><label>编码值</label><input id='rf_value' type='number'></div>"
+      html += "<div class='rfld'><label>位数</label><input id='rf_bits' type='number'></div>"
+      html += "<div class='rfld'><label>协议号</label><input id='rf_protocol' type='number'></div>"
+      html += "<div class='rfld'><label>脉宽</label><input id='rf_pulse' type='number'></div>"
+      html += "<div class='rfld'><label>重复次数</label><input id='rf_repeat' type='number'></div>"
       html += "</div>"
+      html += "<div class='btns'><button class='btn gray' type='button' onclick='closeRf()'>取消</button><button class='btn blue' type='button' onclick='saveRf()'>保存</button></div>"
+      html += "</div></div>"
+      html += "<script>"
+      import json
+      var bdata = []
+      var k = 0
+      for b : btns
+        bdata.push({"i": k, "name": b.find("name", "按钮" + str(b.find("id", k + 1))), "value": b.find("value", 0), "bits": b.find("bits", 24), "protocol": b.find("protocol", 1), "pulse": b.find("pulse_length", 0), "repeat": b.find("repeat", 10)})
+        k += 1
+      end
+      html += "var BTNS=" + json.dump(bdata) + ";"
+      html += "var RFIDX=-1;"
+      html += "function openRf(i){RFIDX=i;var d=BTNS[RFIDX];if(!d)return;document.getElementById('rftitle').textContent=d.name+' · 射频数据';document.getElementById('rf_name').value=d.name;document.getElementById('rf_value').value=d.value;document.getElementById('rf_bits').value=d.bits;document.getElementById('rf_protocol').value=d.protocol;document.getElementById('rf_pulse').value=d.pulse;document.getElementById('rf_repeat').value=d.repeat;document.getElementById('rfmask').classList.add('open');}"
+      html += "function closeRf(){document.getElementById('rfmask').classList.remove('open');}"
+      html += "function saveRf(){if(RFIDX<0)return;var set=function(id){return document.getElementById(id).value};document.getElementById('btn_name'+RFIDX).value=set('rf_name');document.getElementById('btn_value'+RFIDX).value=set('rf_value');document.getElementById('btn_bits'+RFIDX).value=set('rf_bits');document.getElementById('btn_protocol'+RFIDX).value=set('rf_protocol');document.getElementById('btn_pulse'+RFIDX).value=set('rf_pulse');document.getElementById('btn_repeat'+RFIDX).value=set('rf_repeat');closeRf();}"
+      html += "</script>"
     end
     html += "<button class='btn blue' type='submit'>保存</button>"
     html += "</form>"
