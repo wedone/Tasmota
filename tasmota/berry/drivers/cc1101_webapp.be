@@ -61,8 +61,9 @@ class Cc1101WebApp
     return webserver.html_escape(val)
   end
 
-  def icon_picker_html(selected)
+  def icon_picker_html(selected, field_name)
     var opts = [["remote","遥控"],["up","向上"],["down","向下"],["stop","停止"],["antenna","信号"],["power","电源"],["light","灯光"],["door","门窗"],["play","播放"],["event","事件"],["lock","锁定"],["star","收藏"]]
+    if field_name == nil field_name = "icon" end
     var html = "<div class='iconpick'>"
     for o : opts
       var key = o[0]
@@ -72,7 +73,7 @@ class Cc1101WebApp
         cls = " on"
         checked = " checked"
       end
-      html += "<label class='ipick" + cls + "'><input type='radio' name='icon' value='" + key + "'" + checked + "><span class='ic'>" + self.ic(key) + "</span><span class='nm'>" + o[1] + "</span></label>"
+      html += "<label class='ipick" + cls + "'><input type='radio' name='" + field_name + "' value='" + key + "'" + checked + "><span class='ic'>" + self.ic(key) + "</span><span class='nm'>" + o[1] + "</span></label>"
     end
     html += "</div>"
     return html
@@ -91,7 +92,7 @@ class Cc1101WebApp
   end
 
   def icon_picker_js()
-    return "document.querySelectorAll('.ipick').forEach(function(l){l.addEventListener('click',function(){document.querySelectorAll('.ipick').forEach(function(x){x.classList.remove('on')});l.classList.add('on')})});"
+    return "document.querySelectorAll('.ipick').forEach(function(l){l.addEventListener('click',function(){var g=l.closest('.iconpick');g.querySelectorAll('.ipick').forEach(function(x){x.classList.remove('on')});l.classList.add('on')})});"
   end
 
   def icon_select_html(name, selected)
@@ -801,7 +802,7 @@ class Cc1101WebApp
         self.app_send_part("<div class='sect'>备注</div>")
         self.app_send_part(f"<div class='card'><input name='note' value='{webserver.html_escape(note)}' placeholder='可选' style='width:100%;border:none;font-size:14px;background:transparent;'></div>")
         self.app_send_part("<div class='sect'>设备图标</div>")
-        self.app_send_part("<div class='card'>" + self.icon_picker_html(self.icon_key(icon)) + "</div>")
+        self.app_send_part("<div class='card'>" + self.icon_picker_html(self.icon_key(icon), "icon") + "</div>")
         self.app_send_part("<script>" + self.icon_picker_js() + "</script>")
       else
         self.app_send_part(f"<input type='hidden' name='name' value='{webserver.html_escape(name)}'>")
@@ -820,7 +821,8 @@ class Cc1101WebApp
         self.app_send_part("</div>")
       end
       self.app_send_part("<div class='sect'>按钮图标</div>")
-      self.app_send_part("<div class='card'>" + self.icon_select_html("bicon", icon) + "</div>")
+      self.app_send_part("<div class='card'>" + self.icon_picker_html(self.icon_key(icon), "bicon") + "</div>")
+      self.app_send_part("<script>" + self.icon_picker_js() + "</script>")
       self.app_send_part("<div class='sect'>重复次数</div>")
       self.app_send_part("<div class='card'><input name='repeat' type='number' value='10' style='width:100%;border:none;font-size:14px;background:transparent;'></div>")
       self.app_send_part("<button class='btn blue' type='submit'>" + (idx < total ? "保存并录制下一按钮" : "保存设备") + "</button>")
@@ -845,7 +847,7 @@ class Cc1101WebApp
     self.app_send_part("<div class='full'><div class='sect'>备注</div><div class='card'><input id='devnote' placeholder='可选' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>")
     self.app_send_part("</div>")
     self.app_send_part("<div id='iconrow'><div class='sect'>设备图标</div>")
-    self.app_send_part("<div class='card'>" + self.icon_picker_html("remote") + "</div></div>")
+    self.app_send_part("<div class='card'>" + self.icon_picker_html("remote", "icon") + "</div></div>")
     self.app_send_part("<script>")
     self.app_send_part(self.icon_picker_js())
     self.app_send_part("function pickType(){var labels=document.querySelectorAll('.typepick');for(var i=0;i<labels.length;i++){labels[i].classList.remove('on')}var t=document.querySelector('input[name=type]:checked').value;document.querySelector('input[name=type]:checked').closest('.typepick').classList.add('on');document.getElementById('grprow').style.display=t==='remote'?'block':'none';document.getElementById('locrow').style.display=t==='door'?'block':'none';document.getElementById('btnrow').style.display=t==='remote'?'block':'none';document.getElementById('iconrow').style.display=t==='remote'?'block':'none';var b=document.getElementById('startbtn');if(b)b.textContent=t==='remote'?'创建设备':'开始配对';}")
@@ -1113,7 +1115,7 @@ class Cc1101WebApp
     self.app_send_part("<div class='full'><div class='sect'>备注</div><div class='card'><input name='note' value='" + webserver.html_escape(remote["note"]) + "' style='width:100%;border:none;font-size:14px;background:transparent;'></div></div>")
     self.app_send_part("</div>")
     self.app_send_part("<div class='sect'>设备图标</div>")
-    self.app_send_part("<div class='card'>" + self.icon_picker_html(self.icon_key(remote.find("icon","remote"))) + "</div>")
+    self.app_send_part("<div class='card'>" + self.icon_picker_html(self.icon_key(remote.find("icon","remote")), "icon") + "</div>")
     self.app_send_part("<script>" + self.icon_picker_js() + "</script>")
     if btns != nil && size(btns) > 0
       var i = 0
@@ -1137,6 +1139,7 @@ class Cc1101WebApp
       self.app_send_part("<h3 id='rftitle'>射频数据</h3>")
       self.app_send_part("<div style='font-size:12px;color:var(--secondary);'>修改后随设备表单一起保存</div>")
       self.app_send_part("<div style='margin-top:12px;'><label style='display:block;font-size:11px;color:var(--secondary);margin-bottom:4px;'>按钮名称</label><input id='rf_name' type='text' style='width:100%;border:none;font-size:14px;background:var(--fill);border-radius:8px;padding:8px 10px;'></div>")
+      self.app_send_part("<div style='margin-top:12px;'><label style='display:block;font-size:11px;color:var(--secondary);margin-bottom:4px;'>按钮图标</label>" + self.icon_picker_html("remote", "rf_icon") + "</div>")
       self.app_send_part("<div class='rfgrid'>")
       self.app_send_part("<div class='rfld'><label>编码值</label><input id='rf_value' type='number'></div>")
       self.app_send_part("<div class='rfld'><label>位数</label><input id='rf_bits' type='number'></div>")
@@ -1151,14 +1154,15 @@ class Cc1101WebApp
       var bdata = []
       var k = 0
       for b : btns
-        bdata.push({"i": k, "name": b.find("name", "按钮" + str(b.find("id", k + 1))), "value": b.find("value", 0), "bits": b.find("bits", 24), "protocol": b.find("protocol", 1), "pulse": b.find("pulse_length", 0), "repeat": b.find("repeat", 10)})
+        bdata.push({"i": k, "name": b.find("name", "按钮" + str(b.find("id", k + 1))), "icon": b.find("icon", "remote"), "value": b.find("value", 0), "bits": b.find("bits", 24), "protocol": b.find("protocol", 1), "pulse": b.find("pulse_length", 0), "repeat": b.find("repeat", 10)})
         k += 1
       end
       self.app_send_part("var BTNS=" + json.dump(bdata) + ";")
       self.app_send_part("var RFIDX=-1;")
-      self.app_send_part("function openRf(i){RFIDX=i;var d=BTNS[RFIDX];if(!d)return;document.getElementById('rftitle').textContent=d.name+' · 射频数据';document.getElementById('rf_name').value=d.name;document.getElementById('rf_value').value=d.value;document.getElementById('rf_bits').value=d.bits;document.getElementById('rf_protocol').value=d.protocol;document.getElementById('rf_pulse').value=d.pulse;document.getElementById('rf_repeat').value=d.repeat;document.getElementById('rfmask').classList.add('open');}")
+      self.app_send_part("function openRf(i){RFIDX=i;var d=BTNS[RFIDX];if(!d)return;document.getElementById('rftitle').textContent=d.name+' · 射频数据';document.getElementById('rf_name').value=d.name;document.getElementById('rf_value').value=d.value;document.getElementById('rf_bits').value=d.bits;document.getElementById('rf_protocol').value=d.protocol;document.getElementById('rf_pulse').value=d.pulse;document.getElementById('rf_repeat').value=d.repeat;document.querySelectorAll('.rfbox .ipick').forEach(function(x){x.classList.remove('on')});var ic=document.querySelector('input[name=rf_icon][value=\"'+d.icon+'\"]');if(ic){ic.checked=true;ic.closest('.ipick').classList.add('on');}document.getElementById('rfmask').classList.add('open');}")
       self.app_send_part("function closeRf(){document.getElementById('rfmask').classList.remove('open');}")
-      self.app_send_part("function saveRf(){if(RFIDX<0)return;var set=function(id){return document.getElementById(id).value};document.getElementById('btn_name'+RFIDX).value=set('rf_name');document.getElementById('btn_value'+RFIDX).value=set('rf_value');document.getElementById('btn_bits'+RFIDX).value=set('rf_bits');document.getElementById('btn_protocol'+RFIDX).value=set('rf_protocol');document.getElementById('btn_pulse'+RFIDX).value=set('rf_pulse');document.getElementById('btn_repeat'+RFIDX).value=set('rf_repeat');closeRf();}")
+      self.app_send_part("function saveRf(){if(RFIDX<0)return;var set=function(id){return document.getElementById(id).value};var ico=document.querySelector('input[name=rf_icon]:checked');document.getElementById('btn_name'+RFIDX).value=set('rf_name');document.getElementById('btn_icon'+RFIDX).value=ico?ico.value:'remote';document.getElementById('btn_value'+RFIDX).value=set('rf_value');document.getElementById('btn_bits'+RFIDX).value=set('rf_bits');document.getElementById('btn_protocol'+RFIDX).value=set('rf_protocol');document.getElementById('btn_pulse'+RFIDX).value=set('rf_pulse');document.getElementById('btn_repeat'+RFIDX).value=set('rf_repeat');closeRf();}")
+      self.app_send_part(self.icon_picker_js())
       self.app_send_part("</script>")
     end
     self.app_send_part("<button class='btn blue' type='submit'>保存</button>")
