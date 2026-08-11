@@ -150,7 +150,7 @@ class Cc1101WebApp
     css += ".hintcard{background:var(--fill);border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--secondary);line-height:1.6;}"
     css += ".btncard{margin:0;} .btncard .btnhead{display:flex;gap:8px;align-items:center;} .btncard .btnhead input[type=text]{flex:1;border:none;font-size:14px;background:transparent;}"
     css += ".rfgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 12px;margin-top:10px;} .rfgrid .rfld label{display:block;font-size:11px;color:var(--secondary);margin-bottom:4px;} .rfgrid .rfld input{width:100%;border:none;font-size:14px;background:var(--fill);border-radius:8px;padding:8px 10px;}"
-    css += ".rfmask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:none;align-items:center;justify-content:center;padding:20px;} .rfmask.open{display:flex;} .rfbox{background:var(--card);border-radius:14px;width:100%;max-width:340px;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,.25);} .rfbox h3{margin:0 0 4px;font-size:17px;} .rfbox .rfgrid{margin-top:12px;} .rfbox .btns{display:flex;gap:10px;margin-top:14px;} .rfbox .btns .btn{margin:0;flex:1;font-size:14px;padding:11px;}"
+    css += ".rfmask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;-webkit-overflow-scrolling:touch;} .rfmask.open{display:flex;} .rfbox{background:var(--card);border-radius:14px;width:100%;max-width:340px;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,.25);margin:auto 0;} .rfbox h3{margin:0 0 4px;font-size:17px;} .rfbox .rfgrid{margin-top:12px;} .rfbox .btns{display:flex;gap:10px;margin-top:14px;} .rfbox .btns .btn{margin:0;flex:1;font-size:14px;padding:11px;}"
     return css
   end
 
