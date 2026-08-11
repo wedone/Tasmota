@@ -496,6 +496,7 @@ class Cc1101WebApp
         vd["state"] = "ON"
         g.save_virtual_devices()
         g.seq_run_by_name(vd["on_sequence"])
+        g.publish_vdevice_state(vd)
         break
       end
     end
@@ -1405,6 +1406,20 @@ class Cc1101WebApp
         g.virtual_devices.push({"name": new_name, "on_sequence": on_seq, "off_sequence": off_seq, "state": "OFF"})
       end
       g.save_virtual_devices()
+      if found && name != nil && name != new_name
+        g.clear_ha_vdevice(name)
+      end
+      var saved_vd = nil
+      for v : g.virtual_devices
+        if v["name"] == new_name
+          saved_vd = v
+          break
+        end
+      end
+      if saved_vd != nil
+        g.publish_ha_vdevice(saved_vd)
+        g.publish_vdevice_state(saved_vd)
+      end
       html += "<div class='card' style='text-align:center;color:var(--green);font-weight:600;'>已保存</div>"
       html += "<script>setTimeout(function(){window.location.href='/app/vdev';},1000);</script>"
       self.app_send_page("编辑虚拟设备", "管理", html)

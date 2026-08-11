@@ -9,6 +9,7 @@ class Cc1101Gateway
   var pending_remote
   var last_event_ts
   var device_name
+  var mqtt_topic
   var seq_running_seq, seq_running_index, seq_delay_until, seq_stop_requested
 
   static var _DATA_DIR = ""
@@ -44,6 +45,7 @@ class Cc1101Gateway
     self.pending_remote = nil
     self.last_event_ts = 0
     self.device_name = ""
+    self.mqtt_topic = ""
     self.seq_running_seq = nil
     self.seq_running_index = 0
     self.seq_delay_until = 0
@@ -51,6 +53,9 @@ class Cc1101Gateway
 
     self.load_data()
     self.register_commands()
+    tasmota.add_rule("Mqtt#Connected", def()
+      self.publish_ha_discovery_all()
+    end)
     self.publish_ha_discovery_all()
 
     log("CC1: Gateway initialized", 2)
@@ -328,6 +333,8 @@ class Cc1101Gateway
     end
     cc1101_send(button["value"], button["bits"], button["protocol"],
       button.find("repeat", 10), button.find("pulse_length", 0))
+    remote["last_sent_at"] = tasmota.rtc()["local"]
+    self.save_remotes()
     self.add_event("send", {"remote_id": remote_id, "button_id": button_id, "detail": "button"})
     return true
   end
@@ -339,6 +346,7 @@ class Cc1101Gateway
           remote[k] = updates[k]
         end
         self.save_remotes()
+        self.publish_ha_discovery_remote(remote)
         return true
       end
     end
@@ -360,6 +368,7 @@ class Cc1101Gateway
           b[k] = updates[k]
         end
         self.save_remotes()
+        self.publish_ha_discovery_remote(remote)
         return true
       end
     end
@@ -370,6 +379,8 @@ class Cc1101Gateway
     var idx = 0
     while idx < size(self.remotes)
       if self.remotes[idx]["id"] == id
+        var remote = self.remotes[idx]
+        self.clear_ha_discovery_remote(remote)
         self.remotes.remove(idx)
         self.save_remotes()
 
@@ -427,6 +438,7 @@ class Cc1101Gateway
           door[k] = updates[k]
         end
         self.save_doors()
+        self.publish_ha_discovery_door(door)
         self.publish_door_state(door)
         return true
       end
@@ -438,6 +450,7 @@ class Cc1101Gateway
     var idx = 0
     while idx < size(self.doors)
       if self.doors[idx]["id"] == id
+        self.clear_ha_discovery_door(self.doors[idx]["id"])
         self.doors.remove(idx)
         self.save_doors()
 
@@ -640,10 +653,37 @@ class Cc1101Gateway
     end
 
     var ids = payload_json.find("id")
+    var button_id = payload_json.find("button_id")
     var delay_ms = payload_json.find("delay", 0)
     if delay_ms == nil  delay_ms = 0  end
 
     if ids != nil
+      if button_id != nil
+        if classname(ids) == "list"
+          var idx = 0
+          for id : ids
+            if delay_ms > 0 && idx > 0
+              tasmota.delay(delay_ms)
+            end
+            if !self.send_remote_button(id, button_id)
+              tasmota.resp_cmnd_str('{"Send":"error","reason":"button_not_found"}')
+              return
+            end
+            idx += 1
+          end
+        else
+          if delay_ms > 0
+            tasmota.delay(delay_ms)
+          end
+          if !self.send_remote_button(ids, button_id)
+            tasmota.resp_cmnd_str('{"Send":"error","reason":"button_not_found"}')
+            return
+          end
+        end
+        tasmota.resp_cmnd_str('{"Send":"ok"}')
+        return
+      end
+
       if classname(ids) == "list"
         var idx = 0
         for id : ids
@@ -710,6 +750,22 @@ class Cc1101Gateway
       end
     end
     return "tasmota"
+  end
+
+  def _get_mqtt_topic()
+    if self.mqtt_topic != "" && self.mqtt_topic != nil
+      return self.mqtt_topic
+    end
+    var resp = tasmota.cmd("_Status", true)
+    if resp != nil && resp.find("Status") != nil
+      var st = resp["Status"]
+      if st != nil && st.find("Topic") != nil
+        self.mqtt_topic = st["Topic"]
+        return self.mqtt_topic
+      end
+    end
+    self.mqtt_topic = self._get_device_name()
+    return self.mqtt_topic
   end
 
   def cmd_rf_backup()
@@ -821,9 +877,11 @@ class Cc1101Gateway
       self.sequences.push({"name": name, "steps": steps})
     end
     self.save_sequences()
+    self.publish_ha_discovery_sequence({"name": name, "steps": steps})
   end
 
   def _delete_sequence(name)
+    self.clear_ha_discovery_sequence(name)
     var i = 0
     while i < size(self.sequences)
       if self.sequences[i]["name"] == name
@@ -1021,69 +1079,234 @@ class Cc1101Gateway
     end
   end
 
-  def publish_door_state(door)
+  def _ha_slug(val)
+    import crc
+    import string
+    var s = str(val)
+    var clean = ""
+    var i = 0
+    while i < size(s)
+      var c = s[i]
+      if (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || (c >= "0" && c <= "9") || c == "_" || c == "-"
+        clean += c
+      elif c == " " || c == "　"
+        clean += "_"
+      end
+      i += 1
+    end
+    if clean == ""
+      clean = "x"
+    end
+    var h = crc.crc32(0xFFFFFFFF, bytes().fromstring(s))
+    return string.tolower(clean) + "_" + format("%08X", h)
+  end
+
+  def _ha_device()
+    return {
+      "identifiers": [self._get_mqtt_topic()],
+      "name": "CC1101 Gateway",
+      "model": "Tasmota CC1101",
+      "manufacturer": "Tasmota"
+    }
+  end
+
+  def _publish_ha_config(component, object_id, config)
     import mqtt
     import json
+    mqtt.publish(f"homeassistant/{component}/{object_id}/config", json.dump(config), true)
+  end
 
-    var dev = self._get_device_name()
+  def _clear_ha_config(component, object_id)
+    import mqtt
+    mqtt.publish(f"homeassistant/{component}/{object_id}/config", "", true)
+  end
 
-    var payload = json.dump({door["name"]: {"State": door["state"], "Code": door["code"]}})
-    mqtt.publish(f"tele/{dev}/SENSOR", payload)
+  def publish_door_state(door)
+    import mqtt
+    var dev = self._get_mqtt_topic()
+    mqtt.publish(f"tele/{dev}/rf_door/{door['id']}", door["state"])
   end
 
   def publish_ha_discovery_all()
     for door : self.doors
       self.publish_ha_discovery_door(door)
+      self.publish_door_state(door)
     end
     for remote : self.remotes
       self.publish_ha_discovery_remote(remote)
     end
+    for seq : self.sequences
+      self.publish_ha_discovery_sequence(seq)
+    end
     for vd : self.virtual_devices
       self.publish_ha_vdevice(vd)
+      self.publish_vdevice_state(vd)
     end
   end
 
   def publish_ha_discovery_door(door)
-    import mqtt
-    import json
-    var dev = self._get_device_name()
-
+    var dev = self._get_mqtt_topic()
+    var disp = self._get_device_name()
+    var oid = f"{dev}_door_{door['id']}"
     var config = {
-      "name": f"{dev}_{door['name']}",
+      "name": f"{disp}_{door['name']}",
       "device_class": "door",
-      "state_topic": f"tele/{dev}/SENSOR",
-      "value_template": f"{{{{value_json.{door['name']}.State}}}}",
+      "state_topic": f"tele/{dev}/rf_door/{door['id']}",
       "payload_on": "OPEN",
       "payload_off": "CLOSE",
-      "unique_id": f"{dev}_door_{door['id']}",
-      "device": {
-        "identifiers": [dev],
-        "name": "CC1101 Gateway",
-        "model": "Tasmota CC1101",
-        "manufacturer": "Tasmota"
-      }
+      "unique_id": oid,
+      "device": self._ha_device(),
+      "availability_topic": f"tele/{dev}/LWT",
+      "payload_available": "Online",
+      "payload_not_available": "Offline"
     }
-    mqtt.publish(f"homeassistant/binary_sensor/{dev}_door_{door['id']}/config", json.dump(config), true)
+    self._clear_ha_config("binary_sensor", f"{self._get_device_name()}_door_{door['id']}")
+    self._clear_ha_config("binary_sensor", f"{dev}_door_{door['id']}")
+    self._publish_ha_config("binary_sensor", oid, config)
+  end
+
+  def clear_ha_discovery_door(id)
+    var dev = self._get_mqtt_topic()
+    var disp = self._get_device_name()
+    self._clear_ha_config("binary_sensor", f"{disp}_door_{id}")
+    self._clear_ha_config("binary_sensor", f"{dev}_door_{id}")
   end
 
   def publish_ha_discovery_remote(remote)
-    import mqtt
     import json
-    var dev = self._get_device_name()
+    var dev = self._get_mqtt_topic()
+    var disp = self._get_device_name()
+    var rid = remote["id"]
+    var buttons = remote.find("buttons", [])
+    if buttons == nil  buttons = []  end
 
-    var config = {
-      "name": f"{dev}_{remote['name']}",
-      "command_topic": f"cmnd/{dev}/rf_send",
-      "payload_press": json.dump({"id": remote["id"]}),
-      "unique_id": f"{dev}_remote_{remote['id']}",
-      "device": {
-        "identifiers": [dev],
-        "name": "CC1101 Gateway",
-        "model": "Tasmota CC1101",
-        "manufacturer": "Tasmota"
+    self._clear_ha_config("button", f"{disp}_remote_{rid}")
+    self._clear_ha_config("button", f"{dev}_remote_{rid}")
+
+    var recorded = []
+    for b : buttons
+      if b.find("recorded", false) && b.find("value", 0) > 0
+        recorded.push(b)
+      end
+    end
+
+    if size(recorded) == 0
+      if size(buttons) == 0
+        var oid = f"{dev}_remote_{rid}"
+        var config = {
+          "name": f"{disp}_{remote['name']}",
+          "command_topic": f"cmnd/{dev}/RfSend",
+          "payload_press": json.dump({"id": rid}),
+          "unique_id": oid,
+          "device": self._ha_device(),
+          "availability_topic": f"tele/{dev}/LWT",
+          "payload_available": "Online",
+          "payload_not_available": "Offline"
+        }
+        self._publish_ha_config("button", oid, config)
+      end
+      return
+    end
+
+    for b : buttons
+      self._clear_ha_config("button", f"{dev}_remote_{rid}_b{b['id']}")
+    end
+    for b : recorded
+      var bid = b["id"]
+      var oid = f"{dev}_remote_{rid}_b{bid}"
+      var config = {
+        "name": f"{disp}_{remote['name']}_{b['name']}",
+        "command_topic": f"cmnd/{dev}/RfSend",
+        "payload_press": json.dump({"id": rid, "button_id": bid}),
+        "unique_id": oid,
+        "device": self._ha_device(),
+        "availability_topic": f"tele/{dev}/LWT",
+        "payload_available": "Online",
+        "payload_not_available": "Offline"
       }
+      self._publish_ha_config("button", oid, config)
+    end
+  end
+
+  def clear_ha_discovery_remote(remote)
+    var dev = self._get_mqtt_topic()
+    var disp = self._get_device_name()
+    var rid = remote["id"]
+    self._clear_ha_config("button", f"{disp}_remote_{rid}")
+    self._clear_ha_config("button", f"{dev}_remote_{rid}")
+    var buttons = remote.find("buttons", [])
+    if buttons != nil
+      for b : buttons
+        self._clear_ha_config("button", f"{dev}_remote_{rid}_b{b['id']}")
+      end
+    end
+  end
+
+  def publish_ha_discovery_sequence(seq)
+    import json
+    var dev = self._get_mqtt_topic()
+    var disp = self._get_device_name()
+    var slug = self._ha_slug(seq["name"])
+    var oid = f"{dev}_seq_{slug}"
+    var config = {
+      "name": f"{disp}_{seq['name']}",
+      "command_topic": f"cmnd/{dev}/RfSequence",
+      "payload_press": json.dump({"cmd": "run", "name": seq["name"]}),
+      "unique_id": oid,
+      "device": self._ha_device(),
+      "availability_topic": f"tele/{dev}/LWT",
+      "payload_available": "Online",
+      "payload_not_available": "Offline"
     }
-    mqtt.publish(f"homeassistant/button/{dev}_remote_{remote['id']}/config", json.dump(config), true)
+    self._clear_ha_config("button", f"{disp}_seq_{slug}")
+    self._publish_ha_config("button", oid, config)
+  end
+
+  def clear_ha_discovery_sequence(name)
+    var dev = self._get_mqtt_topic()
+    var disp = self._get_device_name()
+    var slug = self._ha_slug(name)
+    self._clear_ha_config("button", f"{disp}_seq_{slug}")
+    self._clear_ha_config("button", f"{dev}_seq_{slug}")
+  end
+
+  def publish_ha_vdevice(vd)
+    var dev = self._get_mqtt_topic()
+    var disp = self._get_device_name()
+    var slug = self._ha_slug(vd["name"])
+    var oid = f"{dev}_vd_{slug}"
+    var cfg = {
+      "name": vd["name"],
+      "command_topic": f"cmnd/{dev}/rf_vdevice/{vd['name']}",
+      "state_topic": f"tele/{dev}/rf_vdevice/{vd['name']}",
+      "payload_on": "ON",
+      "payload_off": "OFF",
+      "unique_id": oid,
+      "device": self._ha_device(),
+      "availability_topic": f"tele/{dev}/LWT",
+      "payload_available": "Online",
+      "payload_not_available": "Offline"
+    }
+    self._clear_ha_config("switch", f"{disp}_vd_{vd['name']}")
+    self._clear_ha_config("switch", f"{disp}_vd_{slug}")
+    self._clear_ha_config("switch", f"{dev}_vd_{vd['name']}")
+    self._publish_ha_config("switch", oid, cfg)
+  end
+
+  def clear_ha_vdevice(name)
+    var dev = self._get_mqtt_topic()
+    var disp = self._get_device_name()
+    var slug = self._ha_slug(name)
+    self._clear_ha_config("switch", f"{disp}_vd_{name}")
+    self._clear_ha_config("switch", f"{disp}_vd_{slug}")
+    self._clear_ha_config("switch", f"{dev}_vd_{name}")
+    self._clear_ha_config("switch", f"{dev}_vd_{slug}")
+  end
+
+  def publish_vdevice_state(vd)
+    import mqtt
+    var dev = self._get_mqtt_topic()
+    mqtt.publish(f"tele/{dev}/rf_vdevice/{vd['name']}", vd["state"])
   end
 
   def cmd_rf_vdevice(payload, payload_json)
@@ -1107,6 +1330,7 @@ class Cc1101Gateway
       }
       self._upsert_vdevice(vd)
       self.publish_ha_vdevice(vd)
+      self.publish_vdevice_state(vd)
       tasmota.resp_cmnd_str('{"VDevice":"saved"}')
       return
     end
@@ -1134,6 +1358,7 @@ class Cc1101Gateway
   end
 
   def _delete_vdevice(name)
+    self.clear_ha_vdevice(name)
     var i = 0
     while i < size(self.virtual_devices)
       if self.virtual_devices[i]["name"] == name
@@ -1143,29 +1368,6 @@ class Cc1101Gateway
       i += 1
     end
     self.save_virtual_devices()
-  end
-
-  def publish_ha_vdevice(vd)
-    import mqtt
-    import json
-    var dev = self._get_device_name()
-    var cfg = {
-      "name": vd["name"],
-      "command_topic": f"cmnd/{dev}/rf_vdevice/{vd['name']}",
-      "state_topic": f"tele/{dev}/rf_vdevice/{vd['name']}",
-      "payload_on": "ON",
-      "payload_off": "OFF",
-      "unique_id": f"{dev}_vd_{vd['name']}",
-      "device": {"identifiers": [dev], "name": "CC1101 Gateway",
-                 "model": "Tasmota CC1101", "manufacturer": "Tasmota"}
-    }
-    mqtt.publish(f"homeassistant/switch/{dev}_vd_{vd['name']}/config", json.dump(cfg), true)
-  end
-
-  def publish_vdevice_state(vd)
-    import mqtt
-    var dev = self._get_device_name()
-    mqtt.publish(f"tele/{dev}/rf_vdevice/{vd['name']}", vd["state"])
   end
 
   def web_sensor()
@@ -1243,7 +1445,7 @@ class Cc1101Gateway
   def mqtt_data(topic, idx, data, databytes)
     import json
     import string
-    var dev = self._get_device_name()
+    var dev = self._get_mqtt_topic()
     var prefix = "cmnd/" + dev + "/rf_vdevice/"
     if topic.find(prefix) == 0
       var name = topic[size(prefix) .. ]
