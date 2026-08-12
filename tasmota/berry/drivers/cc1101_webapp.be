@@ -3,12 +3,10 @@
 # 433 Gateway App 风格 WebUI（HomeKit 风格）
 # 依赖 cc1101_gateway.be 的全局 gateway 实例
 class Cc1101WebApp
-  var app_css_cache
   var _ic_cache
   var _page_open
 
   def init()
-    self.app_css_cache = ""
     self._ic_cache = {}
     self._page_open = false
   end
@@ -119,58 +117,6 @@ class Cc1101WebApp
     return html
   end
 
-  def app_css()
-    if self.app_css_cache != "" && self.app_css_cache != nil
-      return self.app_css_cache
-    end
-    var css = ""
-    css += "html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC',system-ui,sans-serif;margin:0;padding:0;color:var(--label);-webkit-font-smoothing:antialiased;}"
-    css += "a{outline:none;} *{-webkit-tap-highlight-color:transparent;box-sizing:border-box;}"
-    css += ":root{--bg:#f2f2f7;--card:#fff;--fill:#e5e5ea;--sep:rgba(60,60,67,.29);--label:#000;--secondary:#8e8e93;--blue:#007aff;--green:#34c759;--red:#ff3b30;}"
-    css += "@media (prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1e;--fill:#2c2c2e;--sep:rgba(255,255,255,.2);--label:#fff;--secondary:#98989f;--blue:#0a84ff;--green:#30d158;--red:#ff453a;}}"
-    css += ".app-hd{padding:18px 20px 6px;display:flex;align-items:center;justify-content:space-between;}"
-    css += ".app-hd h1{font-size:28px;margin:0;font-weight:700;letter-spacing:-.02em;}"
-    css += ".app-hd a{text-decoration:none;color:var(--blue);padding:6px;display:flex;} .app-hd a svg{width:24px;height:24px;}"
-    css += ".app-body{padding:6px 20px calc(86px + env(safe-area-inset-bottom,0px));}"
-    css += ".sect{font-size:13px;color:var(--secondary);font-weight:600;margin:20px 0 8px;letter-spacing:.02em;}"
-    css += ".grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}"
-    css += ".grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}"
-    css += ".hkbtn{background:var(--card);border-radius:16px;text-align:center;padding:16px 4px;text-decoration:none;color:var(--label);display:block;transition:transform .12s ease,opacity .12s ease;} .hkbtn:active{transform:scale(.96);opacity:.85;}"
-    css += ".hkbtn .ic{font-size:26px;line-height:1;color:var(--blue);} .hkbtn .ic svg{width:26px;height:26px;} .hkbtn .nm{font-size:11px;margin-top:6px;font-weight:500;color:var(--secondary);}"
-    css += ".devwrap{background:var(--card);border-radius:16px;overflow:hidden;} .devwrap.wide{grid-column:1 / -1;} .devwrap>.hkbtn{background:transparent;padding:15px 4px 9px;cursor:pointer;position:relative;} .devwrap>.hkbtn .chv{position:absolute;right:6px;top:8px;color:var(--secondary);display:flex;transition:transform .15s ease;} .devwrap>.hkbtn .chv svg{width:13px;height:13px;} .devwrap.open>.hkbtn .chv{transform:rotate(90deg);}"
-    css += ".btnrow{display:none;grid-template-columns:repeat(4,1fr);gap:8px;padding:4px 10px 14px;border-top:1px solid var(--sep);} .devwrap.open .btnrow{display:grid;} .btnrow .sqcell .sqbtn{width:100%;height:auto;aspect-ratio:1;min-height:44px;border-radius:14px;} .btnrow .sqcell .sqlbl{font-size:11px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}"
-    css += ".badge{display:inline-block;font-size:10px;line-height:1;padding:4px 6px;border-radius:6px;background:var(--fill);color:var(--secondary);margin-left:8px;vertical-align:2px;}"
-    css += ".typepick{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 6px;border-radius:12px;background:var(--fill);color:var(--blue);cursor:pointer;border:2px solid transparent;text-align:center;} .typepick input{display:none;} .typepick.on{background:var(--card);border-color:var(--blue);} .typepick .ic{width:28px;height:28px;display:flex;align-items:center;justify-content:center;} .typepick .ic svg{width:28px;height:28px;} .typepick span{font-size:12px;color:var(--label);}"
-    css += "select,input{color:var(--label);} select{appearance:none;-webkit-appearance:none;}"
-    css += ".sqcell{text-align:center;text-decoration:none;color:var(--label);display:block;} .sqcell:active{opacity:.6;}"
-    css += ".sqbtn{width:64px;height:64px;margin:0 auto;background:var(--fill);border-radius:18px;display:flex;align-items:center;justify-content:center;color:var(--blue);font-size:30px;line-height:1;} .sqbtn svg{width:32px;height:32px;}"
-    css += ".sqlbl{font-size:12px;color:var(--secondary);margin-top:6px;}"
-    css += ".card{background:var(--card);border-radius:14px;padding:10px 14px;margin-bottom:14px;}"
-    css += ".cell{display:flex;align-items:center;gap:12px;} .cell:active{background:var(--fill);}"
-    css += ".cell .ic{width:38px;height:38px;border-radius:11px;background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--blue);flex:none;font-size:18px;} .cell .ic svg{width:22px;height:22px;}"
-    css += ".cell .tx{flex:1;} .cell .t1{font-size:16px;} .cell .t2{font-size:13px;color:var(--secondary);margin-top:2px;}"
-    css += ".btn{display:block;text-align:center;padding:14px;border-radius:12px;font-size:16px;font-weight:500;text-decoration:none;margin-bottom:10px;} .btn:active{opacity:.7;}"
-    css += ".btn.blue{background:var(--blue);color:#fff;} .btn.gray{background:var(--fill);color:var(--blue);}"
-    css += ".list{background:var(--card);border-radius:14px;overflow:hidden;margin-bottom:14px;}"
-    css += ".row{display:flex;align-items:center;gap:14px;padding:13px 16px;text-decoration:none;color:var(--label);} .row:active{background:var(--fill);} .row + .row{border-top:1px solid var(--sep);}"
-    css += ".row .rix{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;flex:none;} .row .rix svg{width:19px;height:19px;}"
-    css += ".row .rt{flex:1;font-size:16px;} .row .chv{color:var(--secondary);font-size:15px;display:flex;} .row .chv svg{width:20px;height:20px;}"
-    css += ".app-tab{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--sep);display:flex;z-index:9;padding-bottom:env(safe-area-inset-bottom,0px);}"
-    css += ".app-tab a{flex:1;text-align:center;padding:5px 0 8px;font-size:10px;color:var(--secondary);text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:2px;} .app-tab a:active{opacity:.6;}"
-    css += ".app-tab a svg{width:24px;height:24px;} .app-tab a.on{color:var(--blue);font-weight:600;}"
-    css += ".iconpick{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}"
-    css += ".ipick{display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 4px;border-radius:12px;background:var(--fill);color:var(--blue);cursor:pointer;border:2px solid transparent;} .ipick input{display:none;} .ipick.on{background:var(--card);border-color:var(--blue);}"
-    css += ".ipick .ic{width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:24px;} .ipick .ic svg{width:28px;height:28px;} .ipick .nm{font-size:11px;color:var(--secondary);}"
-    css += ".formgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;align-items:end;} .formgrid .full{grid-column:1 / -1;} .formgrid .sect{margin:0 0 8px;} .formgrid .card{margin:0;}"
-    css += "input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;} input[type=number]{-moz-appearance:textfield;appearance:textfield;}"
-    css += ".hintcard{background:var(--fill);border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--secondary);line-height:1.6;}"
-    css += ".btncard{margin:0;} .btncard .btnhead{display:flex;gap:8px;align-items:center;} .btncard .btnhead input[type=text]{flex:1;border:none;font-size:14px;background:transparent;}"
-    css += ".rfgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 12px;margin-top:10px;} .rfgrid .rfld label{display:block;font-size:11px;color:var(--secondary);margin-bottom:4px;} .rfgrid .rfld input{width:100%;border:none;font-size:14px;background:var(--fill);border-radius:8px;padding:8px 10px;}"
-    css += ".rfmask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;-webkit-overflow-scrolling:touch;} .rfmask.open{display:flex;} .rfbox{background:var(--card);border-radius:14px;width:100%;max-width:340px;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,.25);margin:auto 0;} .rfbox h3{margin:0 0 4px;font-size:17px;} .rfbox .rfgrid{margin-top:12px;} .rfbox .btns{display:flex;gap:10px;margin-top:14px;} .rfbox .btns .btn{margin:0;flex:1;font-size:14px;padding:11px;}"
-    self.app_css_cache = css
-    return css
-  end
-
   def maybe_gc()
     import string
     var mem = tasmota.memory()
@@ -271,7 +217,18 @@ class Cc1101WebApp
   def handle_app_css_page()
     import webserver
     webserver.content_open(200, "text/css")
-    webserver.content_send(self.app_css())
+    import path
+    if path.exists("/cc1101_app.css")
+      var f = open("/cc1101_app.css", "r")
+      var total = f.size()
+      while f.tell() < total
+        webserver.content_send(f.readbytes(1024))
+        webserver.content_flush()
+      end
+      f.close()
+    else
+      webserver.content_send("/* css missing */")
+    end
     webserver.content_close()
   end
 
