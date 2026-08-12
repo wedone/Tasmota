@@ -3,7 +3,10 @@
 # 433 Gateway App 风格 WebUI（HomeKit 风格）
 # 依赖 cc1101_gateway.be 的全局 gateway 实例
 class Cc1101WebApp
+  var app_css_cache
+
   def init()
+    self.app_css_cache = ""
   end
 
   def ic(name)
@@ -107,6 +110,9 @@ class Cc1101WebApp
   end
 
   def app_css()
+    if self.app_css_cache != "" && self.app_css_cache != nil
+      return self.app_css_cache
+    end
     var css = ""
     css += "html,body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC',system-ui,sans-serif;margin:0;padding:0;color:var(--label);-webkit-font-smoothing:antialiased;}"
     css += "a{outline:none;} *{-webkit-tap-highlight-color:transparent;box-sizing:border-box;}"
@@ -151,12 +157,12 @@ class Cc1101WebApp
     css += ".btncard{margin:0;} .btncard .btnhead{display:flex;gap:8px;align-items:center;} .btncard .btnhead input[type=text]{flex:1;border:none;font-size:14px;background:transparent;}"
     css += ".rfgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 12px;margin-top:10px;} .rfgrid .rfld label{display:block;font-size:11px;color:var(--secondary);margin-bottom:4px;} .rfgrid .rfld input{width:100%;border:none;font-size:14px;background:var(--fill);border-radius:8px;padding:8px 10px;}"
     css += ".rfmask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;-webkit-overflow-scrolling:touch;} .rfmask.open{display:flex;} .rfbox{background:var(--card);border-radius:14px;width:100%;max-width:340px;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,.25);margin:auto 0;} .rfbox h3{margin:0 0 4px;font-size:17px;} .rfbox .rfgrid{margin-top:12px;} .rfbox .btns{display:flex;gap:10px;margin-top:14px;} .rfbox .btns .btn{margin:0;flex:1;font-size:14px;padding:11px;}"
+    self.app_css_cache = css
     return css
   end
 
   def app_send_header(title, active_tab)
     import webserver
-    tasmota.gc()
     webserver.content_open(200, "text/html")
     webserver.content_send("<!DOCTYPE html><html><head><meta charset='utf-8'>")
     webserver.content_send("<meta name='viewport' content='width=device-width,initial-scale=1,viewport-fit=cover'>")
@@ -170,7 +176,6 @@ class Cc1101WebApp
   def app_send_part(s)
     import webserver
     webserver.content_send(s)
-    webserver.content_flush()
   end
 
   def app_send_footer(active_tab)
@@ -183,19 +188,20 @@ class Cc1101WebApp
     end
     webserver.content_send("</div></body></html>")
     webserver.content_close()
-    tasmota.gc()
   end
 
   def app_send_page(title, active_tab, content_html)
+    import webserver
     self.app_send_header(title, active_tab)
-    var chunk = 512
+    var chunk = 4096
     var i = 0
     while i < size(content_html)
       var ep = i + chunk
       if ep > size(content_html)
         ep = size(content_html)
       end
-      self.app_send_part(content_html[i .. ep - 1])
+      webserver.content_send(content_html[i .. ep - 1])
+      webserver.content_flush()
       i = ep
     end
     self.app_send_footer(active_tab)
