@@ -1,13 +1,14 @@
 #@ solidify:Cc1101Gateway
 
 class Cc1101Gateway
-  var remotes, doors, links, events
+  var remotes, doors, links, logs
   var sequences, virtual_devices
   var next_remote_id, next_door_id, next_link_id
   var recording, record_timeout
   var learn_mode, learn_timeout, learn_result
   var pending_remote
   var last_event_ts
+  var save_remotes_pending, save_logs_pending, save_timer_active
   var device_name
   var mqtt_topic
   var seq_running_seq, seq_running_index, seq_delay_until, seq_stop_requested
@@ -16,22 +17,24 @@ class Cc1101Gateway
   static var _FILE_REMOTES = "/rf_remotes.json"
   static var _FILE_DOORS = "/rf_doors.json"
   static var _FILE_LINKS = "/rf_links.json"
-  static var _FILE_EVENTS = "/rf_events.log"
+  static var _FILE_LOGS = "/rf_events.log"
   static var _FILE_SEQUENCES = "/rf_sequences.json"
   static var _FILE_VDEVICES = "/rf_virtual_devices.json"
   static var _MAX_REMOTES = 64
   static var _MAX_DOORS = 32
   static var _MAX_LINKS = 64
-  static var _MAX_EVENTS = 100
+  static var _MAX_LOGS = 100
   static var _RECORD_TIMEOUT_MS = 30000
   static var _DEBOUNCE_MS = 5000
   static var _TIMER_RECORD = "cc1101_record"
+  static var _TIMER_SAVE = "cc1101_save"
+  static var _SAVE_DELAY_MS = 2000
 
   def init()
     self.remotes = []
     self.doors = []
     self.links = []
-    self.events = []
+    self.logs = []
     self.sequences = []
     self.virtual_devices = []
     self.next_remote_id = 1
@@ -44,6 +47,9 @@ class Cc1101Gateway
     self.learn_result = nil
     self.pending_remote = nil
     self.last_event_ts = 0
+    self.save_remotes_pending = false
+    self.save_logs_pending = false
+    self.save_timer_active = false
     self.device_name = ""
     self.mqtt_topic = ""
     self.seq_running_seq = nil
@@ -93,7 +99,7 @@ class Cc1101Gateway
       self.virtual_devices = data.find("items", [])
     end
 
-    self._load_events()
+    self._load_logs()
   end
 
   def _load_json_file(filename)
@@ -165,22 +171,22 @@ class Cc1101Gateway
     self._save_json_file(self._FILE_VDEVICES, data)
   end
 
-  def _load_events()
+  def _load_logs()
     import path
     import json
     import string
 
-    if !path.exists(self._FILE_EVENTS)
+    if !path.exists(self._FILE_LOGS)
       return
     end
 
     var content = nil
     try
-      var f = open(self._FILE_EVENTS, "r")
+      var f = open(self._FILE_LOGS, "r")
       content = f.read()
       f.close()
     except .. as e, m
-      log(f"CC1: load events failed: {e} {m}", 3)
+      log(f"CC1: load logs failed: {e} {m}", 3)
       return
     end
 
@@ -188,51 +194,104 @@ class Cc1101Gateway
       return
     end
 
-    self.events = []
+    self.logs = []
     var lines = string.split(str(content), "\n")
     for line : lines
       line = string.replace(line, "\r", "")
       if line != ""
         var evt = json.load(line)
         if evt != nil
-          self.events.push(evt)
+          if evt.find("ts") != nil
+            var ts = evt["ts"]
+            if type(ts) == 'int' || type(ts) == 'real'
+              evt["ts"] = self._fmt_ts(ts)
+            else
+              var tsv = str(ts)
+              if string.find(tsv, "T") >= 0
+                evt["ts"] = string.replace(tsv, "T", " ")
+              end
+            end
+          end
+          self.logs.push(evt)
         end
       end
     end
   end
 
-  def save_events()
+  def save_logs()
     import json
 
     var lines = ""
-    for evt : self.events
+    for evt : self.logs
       lines += json.dump(evt) + "\n"
     end
 
     try
-      var f = open(self._FILE_EVENTS, "w")
+      var f = open(self._FILE_LOGS, "w")
       f.write(lines)
       f.close()
     except .. as e, m
-      log(f"CC1: save events failed: {e} {m}", 3)
+      log(f"CC1: save logs failed: {e} {m}", 3)
     end
   end
 
-  def add_event(evt_type, detail)
+  def _now_str()
+    import string
+    return string.replace(tasmota.time_str(tasmota.rtc()["local"]), "T", " ")
+  end
+
+  def _fmt_ts(ts)
+    import string
+    return string.replace(tasmota.time_str(int(ts)), "T", " ")
+  end
+
+  def _arm_save_timer()
+    if self.save_timer_active
+      return
+    end
+    self.save_timer_active = true
+    tasmota.set_timer(self._SAVE_DELAY_MS, def()
+      self.save_timer_active = false
+      self.flush_pending_saves()
+    end, self._TIMER_SAVE)
+  end
+
+  def schedule_remotes_save()
+    self.save_remotes_pending = true
+    self._arm_save_timer()
+  end
+
+  def schedule_logs_save()
+    self.save_logs_pending = true
+    self._arm_save_timer()
+  end
+
+  def flush_pending_saves()
+    if self.save_remotes_pending
+      self.save_remotes_pending = false
+      self.save_remotes()
+    end
+    if self.save_logs_pending
+      self.save_logs_pending = false
+      self.save_logs()
+    end
+  end
+
+  def add_log(evt_type, detail)
     var evt = {
-      "ts": tasmota.rtc()["local"],
+      "ts": self._now_str(),
       "type": evt_type
     }
     for k : detail.keys()
       evt[k] = detail[k]
     end
-    self.events.push(evt)
+    self.logs.push(evt)
 
-    if size(self.events) > self._MAX_EVENTS
-      self.events = self.events[-(self._MAX_EVENTS) .. -1]
+    if size(self.logs) > self._MAX_LOGS
+      self.logs = self.logs[-(self._MAX_LOGS) .. -1]
     end
 
-    self.save_events()
+    self.schedule_logs_save()
   end
 
   def add_remote(name, group, protocol, value, bits, pulse_length, repeat, raw, note, icon)
@@ -255,7 +314,7 @@ class Cc1101Gateway
     self.remotes.push(remote)
     self.next_remote_id += 1
     self.save_remotes()
-    self.add_event("record", {"remote_id": remote["id"], "detail": f"protocol={protocol},value={value}"})
+    self.add_log("record", {"remote_id": remote["id"], "detail": f"protocol={protocol},value={value}"})
     self.publish_ha_discovery_remote(remote)
     return remote
   end
@@ -289,7 +348,7 @@ class Cc1101Gateway
     self.remotes.push(remote)
     self.next_remote_id += 1
     self.save_remotes()
-    self.add_event("record", {"remote_id": remote["id"], "detail": f"buttons={size(buttons)}"})
+    self.add_log("record", {"remote_id": remote["id"], "detail": f"buttons={size(buttons)}"})
     self.publish_ha_discovery_remote(remote)
     return remote
   end
@@ -333,9 +392,9 @@ class Cc1101Gateway
     end
     cc1101_send(button["value"], button["bits"], button["protocol"],
       button.find("repeat", 10), button.find("pulse_length", 0))
-    remote["last_sent_at"] = tasmota.rtc()["local"]
-    self.save_remotes()
-    self.add_event("send", {"remote_id": remote_id, "button_id": button_id, "detail": "button"})
+    remote["last_sent_at"] = self._now_str()
+    self.schedule_remotes_save()
+    self.add_log("send", {"remote_id": remote_id, "button_id": button_id, "detail": "button"})
     return true
   end
 
@@ -393,7 +452,7 @@ class Cc1101Gateway
           end
         end
         self.save_links()
-        self.add_event("delete", {"type": "remote", "id": id})
+        self.add_log("delete", {"type": "remote", "id": id})
         return true
       end
       idx += 1
@@ -425,7 +484,7 @@ class Cc1101Gateway
     self.doors.push(door)
     self.next_door_id += 1
     self.save_doors()
-    self.add_event("door_add", {"door_id": door["id"], "code": code})
+    self.add_log("door_add", {"door_id": door["id"], "code": code})
     self.publish_ha_discovery_door(door)
     self.publish_door_state(door)
     return door
@@ -463,7 +522,7 @@ class Cc1101Gateway
           end
         end
         self.save_links()
-        self.add_event("delete", {"type": "door", "id": id})
+        self.add_log("delete", {"type": "door", "id": id})
         return true
       end
       idx += 1
@@ -711,7 +770,7 @@ class Cc1101Gateway
 
     if value != nil
       cc1101_send(value, bits, protocol, repeat, pulse)
-      self.add_event("send", {"value": value, "detail": "direct"})
+      self.add_log("send", {"value": value, "detail": "direct"})
       tasmota.resp_cmnd_str('{"Send":"ok"}')
       return
     end
@@ -732,9 +791,9 @@ class Cc1101Gateway
     var repeat = remote.find("repeat", 10)
 
     cc1101_send(value, bits, protocol, repeat, pulse)
-    remote["last_sent_at"] = tasmota.rtc()["local"]
-    self.save_remotes()
-    self.add_event("send", {"remote_id": id, "detail": "ok"})
+    remote["last_sent_at"] = self._now_str()
+    self.schedule_remotes_save()
+    self.add_log("send", {"remote_id": id, "detail": "ok"})
   end
 
   def _get_device_name()
@@ -773,7 +832,7 @@ class Cc1101Gateway
     var backup = {
       "version": 1,
       "device": self._get_device_name(),
-      "exported_at": tasmota.rtc()["local"],
+      "exported_at": self._now_str(),
       "remotes": self.remotes,
       "doors": self.doors,
       "links": self.links,
@@ -903,7 +962,7 @@ class Cc1101Gateway
         self.seq_running_seq = seq
         self.seq_running_index = 0
         self.seq_delay_until = 0
-        self.add_event("seq_start", {"seq": name})
+        self.add_log("seq_start", {"seq": name})
         return true
       end
     end
@@ -915,7 +974,7 @@ class Cc1101Gateway
     self.seq_running_seq = nil
     self.seq_running_index = 0
     self.seq_delay_until = 0
-    self.add_event("seq_stop", {})
+    self.add_log("seq_stop", {})
   end
 
   def seq_tick()
@@ -926,7 +985,7 @@ class Cc1101Gateway
     var seq = self.seq_running_seq
     var steps = seq["steps"]
     if self.seq_running_index >= size(steps)
-      self.add_event("seq_done", {"seq": seq["name"]})
+      self.add_log("seq_done", {"seq": seq["name"]})
       self.seq_running_seq = nil
       self.seq_running_index = 0
       return
@@ -1042,10 +1101,10 @@ class Cc1101Gateway
 
       if new_state != door["state"]
         door["state"] = new_state
-        door["last_event_at"] = tasmota.rtc()["local"]
+        door["last_event_at"] = self._now_str()
         self.save_doors()
         self.publish_door_state(door)
-        self.add_event("door", {"door_id": door["id"], "detail": new_state})
+        self.add_log("door", {"door_id": door["id"], "detail": new_state})
         self.execute_links(door["id"], new_state)
       end
     end
@@ -1060,18 +1119,18 @@ class Cc1101Gateway
             var remote_id = link["action_payload"].find("remote_id", 0)
             if remote_id > 0
               self._send_remote_by_id(remote_id)
-              link["last_triggered_at"] = tasmota.rtc()["local"]
+              link["last_triggered_at"] = self._now_str()
               self.save_links()
-              self.add_event("link", {"link_id": link["id"], "detail": f"rf_send remote_id={remote_id}"})
+              self.add_log("link", {"link_id": link["id"], "detail": f"rf_send remote_id={remote_id}"})
             end
           elif link["action_type"] == "mqtt_publish"
             var topic = link["action_payload"].find("topic", "")
             var payload = link["action_payload"].find("payload", "")
             if topic != ""
               mqtt.publish(topic, payload)
-              link["last_triggered_at"] = tasmota.rtc()["local"]
+              link["last_triggered_at"] = self._now_str()
               self.save_links()
-              self.add_event("link", {"link_id": link["id"], "detail": f"mqtt topic={topic}"})
+              self.add_log("link", {"link_id": link["id"], "detail": f"mqtt topic={topic}"})
             end
           end
         end
@@ -1394,10 +1453,9 @@ class Cc1101Gateway
   end
 
   def save_before_restart()
-    self.save_remotes()
+    self.flush_pending_saves()
     self.save_doors()
     self.save_links()
-    self.save_events()
   end
 
   def web_add_handler()

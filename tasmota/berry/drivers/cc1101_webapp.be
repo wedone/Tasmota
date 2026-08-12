@@ -76,7 +76,7 @@ class Cc1101WebApp
   end
 
   def icon_picker_html(selected, field_name)
-    var opts = [["remote","遥控"],["up","向上"],["down","向下"],["stop","停止"],["antenna","信号"],["power","电源"],["light","灯光"],["door","门窗"],["play","播放"],["event","事件"],["lock","锁定"],["star","收藏"]]
+    var opts = [["remote","遥控"],["up","向上"],["down","向下"],["stop","停止"],["antenna","信号"],["power","电源"],["light","灯光"],["door","门窗"],["play","播放"],["event","日志"],["lock","锁定"],["star","收藏"]]
     if field_name == nil field_name = "icon" end
     self.app_send_part("<div class='iconpick'>")
     for o : opts
@@ -109,7 +109,7 @@ class Cc1101WebApp
   end
 
   def icon_select_html(name, selected)
-    var opts = [["remote","遥控"],["up","向上"],["down","向下"],["stop","停止"],["power","电源"],["light","灯光"],["door","门窗"],["play","播放"],["lock","锁定"],["star","收藏"],["event","事件"],["antenna","信号"]]
+    var opts = [["remote","遥控"],["up","向上"],["down","向下"],["stop","停止"],["power","电源"],["light","灯光"],["door","门窗"],["play","播放"],["lock","锁定"],["star","收藏"],["event","日志"],["antenna","信号"]]
     var html = "<select name='" + name + "' style='width:100%;border:none;font-size:14px;background:transparent;'>"
     for o : opts
       var sel = o[0] == selected ? " selected" : ""
@@ -201,7 +201,7 @@ class Cc1101WebApp
   def app_send_footer(active_tab)
     import webserver
     webserver.content_send("</div>")
-    var tabs = [["/app/rf","设备","remote"],["/app/seq","场景","play"],["/app/event","事件","event"],["/app/manage","管理","gear"]]
+    var tabs = [["/app/rf","设备","remote"],["/app/seq","场景","play"],["/app/event","日志","event"],["/app/manage","管理","gear"]]
     webserver.content_send("<div class='app-tab'>")
     for t : tabs
       webserver.content_send("<a href='" + t[0] + "'" + (t[1] == active_tab ? " class='on'" : "") + ">" + self.ic(t[2]) + "<span>" + t[1] + "</span></a>")
@@ -480,25 +480,25 @@ class Cc1101WebApp
   end
 
   def handle_app_event_page()
-    self.guard_page("事件", def()
+    self.guard_page("日志", def()
     import webserver
     var g = gateway
-    self.app_send_header("事件", "事件")
-    self.app_send_part("<div class='sect'>事件</div><div class='card'>")
-    var n = size(g.events)
+    self.app_send_header("日志", "日志")
+    self.app_send_part("<div class='sect'>日志</div><div class='card'>")
+    var n = size(g.logs)
     if n == 0
-      self.app_send_part("<div style='color:#8e8e93;font-size:12px;'>暂无事件</div>")
+      self.app_send_part("<div style='color:#8e8e93;font-size:12px;'>暂无日志</div>")
     else
       var start = n > 30 ? n - 30 : 0
       for i : start .. n - 1
-        var evt = g.events[i]
+        var evt = g.logs[i]
         self.app_send_part(f"<div style='padding:5px 0;border-bottom:1px solid #f2f2f7;font-size:12px;'>")
         self.app_send_part(f"<span style='color:#8e8e93;font-size:11px;'>{evt.find('ts','-')}</span> ")
         self.app_send_part(f"<span>{webserver.html_escape(evt['type'])} · {webserver.html_escape(str(evt.find('detail','')))}</span></div>")
       end
     end
     self.app_send_part("</div>")
-    self.app_send_footer("事件")
+    self.app_send_footer("日志")
     end)
   end
 
